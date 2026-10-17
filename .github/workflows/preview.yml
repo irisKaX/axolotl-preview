@@ -51,6 +51,36 @@ jobs:
       - name: Build preview
         run: npm run build
 
+      - name: Checkout isolated header (pinned, separate source directory)
+        uses: actions/checkout@v4
+        with:
+          repository: irisKaX/axolotl-2
+          ref: 011ecc3ac587145317f87a54efd6974b2205ad19
+          path: _header-source
+          persist-credentials: false
+
+      - name: Install isolated header dependencies
+        working-directory: _header-source
+        run: npm ci
+
+      - name: Verify isolated header unit tests
+        working-directory: _header-source
+        run: npm test
+
+      - name: Build isolated header
+        working-directory: _header-source
+        env:
+          AXO_PREVIEW_BASE: /axolotl-preview/header-rebuild/
+        run: npm run build:header
+
+      - name: Add isolated header without replacing existing labs
+        run: |
+          mkdir -p dist/header-rebuild/evidence
+          cp -a _header-source/dist-header-rebuild/. dist/header-rebuild/
+          cp dist/header-rebuild/header-rebuild.html dist/header-rebuild/index.html
+          cp -a _header-source/docs/header-rebuild/. dist/header-rebuild/evidence/
+          printf '%s\n' '011ecc3ac587145317f87a54efd6974b2205ad19' > dist/header-rebuild/source-commit.txt
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
