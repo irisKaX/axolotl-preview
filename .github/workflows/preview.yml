@@ -18,11 +18,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout reviewed Header Responsive Lab commit
+      - name: Checkout reviewed Header Labs commit
         uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 5bc0bd8fc6463fa8ad7d8e051e181386da2af486
+          ref: 2937dd5a09ad4ef808d358806738b1830c2c69b9
           persist-credentials: false
 
       - name: Node 24
