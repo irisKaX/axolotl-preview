@@ -55,7 +55,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 6eec4da6e44772b4c8a19029cfaeb387dfdc543d
+          ref: be2527ca9da9ab56e9fb30c252127a8796e08289
           path: _header-source
           persist-credentials: false
 
@@ -79,7 +79,7 @@ jobs:
           cp -a _header-source/dist-header-rebuild/. dist/header-rebuild/
           cp dist/header-rebuild/header-rebuild.html dist/header-rebuild/index.html
           cp -a _header-source/docs/header-rebuild/. dist/header-rebuild/evidence/
-          printf '%s\n' '6eec4da6e44772b4c8a19029cfaeb387dfdc543d' > dist/header-rebuild/source-commit.txt
+          printf '%s\n' 'be2527ca9da9ab56e9fb30c252127a8796e08289' > dist/header-rebuild/source-commit.txt
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
