@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: d14bc1666ba09f367b166786c3ff974e15d314c9
+          ref: 5bc0bd8fc6463fa8ad7d8e051e181386da2af486
           persist-credentials: false
 
       - name: Node 24
