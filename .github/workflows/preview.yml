@@ -2,7 +2,7 @@ name: Axolotl preview deployment
 
 on:
   push:
-    branches: [main]
+    branches: [preview/header-responsive-lab]
   workflow_dispatch:
 
 permissions:
@@ -18,11 +18,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Axolotl repair branch
+      - name: Checkout reviewed Header Responsive Lab commit
         uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: fix/mobile-disclosure-pointer-leave
+          ref: d50d0de12ea320cc4c1ed75d4c1b3de3870c47cf
           persist-credentials: false
 
       - name: Node 24
