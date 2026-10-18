@@ -1,7 +1,7 @@
-name: Aperture 02 isolated refinement
+name: Dark Veil isolated background lab
 on:
   push:
-    branches: [preview/living-catalog-20261018]
+    branches: [preview/dark-veil-lab-20261018]
 permissions:
   contents: read
   actions: read
@@ -18,56 +18,70 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 85429da3f05115169732887a6ff0a721355b7437
+          ref: b9bfb20f7a4baa6142d5491c8151c56397d4b6aa
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Build only isolated exploration
+      - name: Typecheck and unchanged header tests
         run: |
-          node experiments/living-catalog/build.mjs
-          node experiments/aperture-02/build.mjs
-      - name: Install Chromium for experiment QA
-        run: npx playwright install --with-deps chromium
-      - name: Check interactions, responsive layout and unchanged header
-        run: node experiments/aperture-02/check-browser.mjs
+          npx tsc --noEmit
+          npx vitest run src/app/header/Header.test.tsx
+      - name: Build isolated Dark Veil entrypoint
+        run: node src/experiments/dark-veil/build.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Verify visual, interactive, responsive and fallback behavior
+        run: |
+          npx vite preview --config src/experiments/dark-veil/vite.config.ts --host 127.0.0.1 --port 4191 > /tmp/veil-server.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4191/axolotl-preview/dark-veil-lab/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node src/experiments/dark-veil/check-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: aperture-02-evidence
-          path: experiments/aperture-02/evidence/
-          retention-days: 14
-      - name: Restore existing preview artifact exactly
+          name: dark-veil-evidence
+          path: docs/dark-veil/
+          retention-days: 30
+      - name: Guard against replacing a newer preview publication
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {data} = await github.rest.actions.listWorkflowRunsForRepo({owner: context.repo.owner, repo: context.repo.repo, status: 'success', per_page: 10});
+            const latest = data.workflow_runs.find(run => run.id !== context.runId);
+            if (latest?.id !== 39153208785) throw new Error('Preview baseline changed; stop instead of replacing newer experiments.');
+      - name: Restore current preview without rebuilding previous experiments
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39136204092
+          run-id: 39153208785
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
-      - name: Preserve previous labs and add isolated catalog directory
+      - name: Add only new lab and verify all preexisting file hashes
         run: |
           mkdir -p preview-output
           tar -xf previous-preview/artifact.tar -C preview-output
           python3 - <<'PY'
           import pathlib,hashlib,json
-          root=pathlib.Path("preview-output")
-          manifest={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob("*") if p.is_file()}
-          pathlib.Path("previous-hashes.json").write_text(json.dumps(manifest))
-          assert not (root/"aperture-02-20261018").exists(), "Do not overwrite an existing experiment"
+          root=pathlib.Path('preview-output')
+          manifest={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
+          pathlib.Path('previous-hashes.json').write_text(json.dumps(manifest))
+          assert not (root/'dark-veil-lab').exists(), 'Do not overwrite existing content'
           PY
-          mkdir -p preview-output/aperture-02-20261018/evidence
-          cp experiments/aperture-02/dist/*.html preview-output/aperture-02-20261018/
-          cp experiments/aperture-02/evidence/* preview-output/aperture-02-20261018/evidence/
-          printf '%s\n' '85429da3f05115169732887a6ff0a721355b7437' > preview-output/aperture-02-20261018/source-commit.txt
+          mkdir -p preview-output/dark-veil-lab/evidence
+          cp -R dist-dark-veil/. preview-output/dark-veil-lab/
+          cp -R docs/dark-veil/. preview-output/dark-veil-lab/evidence/
+          printf '%s\n' 'b9bfb20f7a4baa6142d5491c8151c56397d4b6aa' > preview-output/dark-veil-lab/source-commit.txt
           python3 - <<'PY'
           import pathlib,hashlib,json
-          root=pathlib.Path("preview-output")
-          old=json.loads(pathlib.Path("previous-hashes.json").read_text())
+          root=pathlib.Path('preview-output')
+          old=json.loads(pathlib.Path('previous-hashes.json').read_text())
           assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
-          print(f"Preserved {len(old)} preexisting files byte-for-byte")
+          print(f'Preserved {len(old)} preexisting files byte-for-byte')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
