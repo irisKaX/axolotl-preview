@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 1cd3881b6a9a45608c6b2325a62c4e30bd328385
+          ref: 85429da3f05115169732887a6ff0a721355b7437
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -61,7 +61,7 @@ jobs:
           mkdir -p preview-output/aperture-02-20261018/evidence
           cp experiments/aperture-02/dist/*.html preview-output/aperture-02-20261018/
           cp experiments/aperture-02/evidence/* preview-output/aperture-02-20261018/evidence/
-          printf '%s\n' '1cd3881b6a9a45608c6b2325a62c4e30bd328385' > preview-output/aperture-02-20261018/source-commit.txt
+          printf '%s\n' '85429da3f05115169732887a6ff0a721355b7437' > preview-output/aperture-02-20261018/source-commit.txt
           python3 - <<'PY'
           import pathlib,hashlib,json
           root=pathlib.Path("preview-output")
