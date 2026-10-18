@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: aa4b1ab642f7f7a65640c4e20e3d34b371d1afa2
+          ref: 303d3fba45113bb60d38174f39ae4d7a068abc6a
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -59,7 +59,7 @@ jobs:
           mkdir -p preview-output/living-catalog-20261018/evidence
           cp experiments/living-catalog/dist/*.html preview-output/living-catalog-20261018/
           cp experiments/living-catalog/evidence/* preview-output/living-catalog-20261018/evidence/
-          printf '%s\n' 'aa4b1ab642f7f7a65640c4e20e3d34b371d1afa2' > preview-output/living-catalog-20261018/source-commit.txt
+          printf '%s\n' '303d3fba45113bb60d38174f39ae4d7a068abc6a' > preview-output/living-catalog-20261018/source-commit.txt
           python3 - <<'PY'
           import pathlib,hashlib,json
           root=pathlib.Path("preview-output")
