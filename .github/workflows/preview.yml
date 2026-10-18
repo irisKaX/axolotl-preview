@@ -1,94 +1,76 @@
-name: Axolotl preview deployment
-
+name: Living Catalog isolated preview
 on:
   push:
-    branches: [preview/header-responsive-lab]
-  workflow_dispatch:
-
+    branches: [preview/living-catalog-20261018]
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
-
 concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout reviewed Header Labs commit
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: f25ab73bfb4f7d1de6bc63215c6247dc91bd29d6
+          ref: aa4b1ab642f7f7a65640c4e20e3d34b371d1afa2
           persist-credentials: false
-
-      - name: Node 24
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
-
-      - name: Set preview URL base
+      - run: npm ci
+      - name: Build only isolated exploration
+        run: node experiments/living-catalog/build.mjs
+      - name: Install Chromium for experiment QA
+        run: npx playwright install --with-deps chromium
+      - name: Check interactions, responsive layout and unchanged header
+        run: node experiments/living-catalog/check-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: living-catalog-evidence
+          path: experiments/living-catalog/evidence/
+          retention-days: 14
+      - name: Restore existing preview artifact exactly
+        uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          run-id: 39078876114
+          github-token: ${{ github.token }}
+          repository: irisKaX/axolotl-preview
+          path: previous-preview
+      - name: Preserve previous labs and add isolated catalog directory
         run: |
+          mkdir -p preview-output
+          tar -xf previous-preview/artifact.tar -C preview-output
           python3 - <<'PY'
-          from pathlib import Path
-          p = Path("vite.config.ts")
-          content = p.read_text()
-          old = 'base: "/axolotl-2/",'
-          assert content.count(old) == 1, "Unexpected Vite base config"
-          p.write_text(content.replace(old, 'base: "/axolotl-preview/",'))
+          import pathlib,hashlib,json
+          root=pathlib.Path("preview-output")
+          manifest={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob("*") if p.is_file()}
+          pathlib.Path("previous-hashes.json").write_text(json.dumps(manifest))
+          assert not (root/"living-catalog-20261018").exists(), "Do not overwrite an existing experiment"
           PY
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run unit tests
-        run: npm test
-
-      - name: Build preview
-        run: npm run build
-
-      - name: Checkout isolated header (pinned, separate source directory)
-        uses: actions/checkout@v4
+          mkdir -p preview-output/living-catalog-20261018/evidence
+          cp experiments/living-catalog/dist/*.html preview-output/living-catalog-20261018/
+          cp experiments/living-catalog/evidence/* preview-output/living-catalog-20261018/evidence/
+          printf '%s\n' 'aa4b1ab642f7f7a65640c4e20e3d34b371d1afa2' > preview-output/living-catalog-20261018/source-commit.txt
+          python3 - <<'PY'
+          import pathlib,hashlib,json
+          root=pathlib.Path("preview-output")
+          old=json.loads(pathlib.Path("previous-hashes.json").read_text())
+          assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
+          print(f"Preserved {len(old)} preexisting files byte-for-byte")
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
         with:
-          repository: irisKaX/axolotl-2
-          ref: be2527ca9da9ab56e9fb30c252127a8796e08289
-          path: _header-source
-          persist-credentials: false
-
-      - name: Install isolated header dependencies
-        working-directory: _header-source
-        run: npm ci
-
-      - name: Verify isolated header unit tests
-        working-directory: _header-source
-        run: npm test
-
-      - name: Build isolated header
-        working-directory: _header-source
-        env:
-          AXO_PREVIEW_BASE: /axolotl-preview/header-rebuild/
-        run: npm run build:header
-
-      - name: Add isolated header without replacing existing labs
-        run: |
-          mkdir -p dist/header-rebuild/evidence
-          cp -a _header-source/dist-header-rebuild/. dist/header-rebuild/
-          cp dist/header-rebuild/header-rebuild.html dist/header-rebuild/index.html
-          cp -a _header-source/docs/header-rebuild/. dist/header-rebuild/evidence/
-          printf '%s\n' 'be2527ca9da9ab56e9fb30c252127a8796e08289' > dist/header-rebuild/source-commit.txt
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload static preview
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
+          path: preview-output
   deploy:
     needs: build
     runs-on: ubuntu-latest
@@ -96,6 +78,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Publish isolated preview host only
         id: deployment
         uses: actions/deploy-pages@v4
