@@ -1,4 +1,4 @@
-name: Design System Library V1.1 extensibility preview
+name: Design System Library V1.1 Colors and Gradients preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -24,14 +24,14 @@ jobs:
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data} = await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const latest=data.find(d=>d.sha !== context.sha);
-            if(!latest || latest.sha !== 'e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d') throw new Error('Preview changed; do not restore an older artifact');
+            if(!latest || latest.sha !== 'b842619efff1af32dcc2467235ee2c93487d33d6') throw new Error('Preview changed; do not restore an older artifact');
             const {data: statuses}=await github.rest.repos.listDeploymentStatuses({owner:context.repo.owner,repo:context.repo.repo,deployment_id:latest.id});
             if(statuses[0]?.state !== 'success') throw new Error('Baseline publication is not successful');
             core.info('Confirmed workflow Pages, preview-only host, latest successful baseline and shared concurrency lock.');
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: ae655516c45429a0689fb1ee798c923c94c95fc1
+          ref: 8c9b567391a13eacd8ee4dc9ae63490465614218
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -42,6 +42,8 @@ jobs:
         run: |
           git fetch --depth=1 origin 62808f182479c947cf70e7e2918b5fba74b321ad
           git diff --exit-code 62808f182479c947cf70e7e2918b5fba74b321ad HEAD -- src/design-system/Button src/app src/components src/header src/tools src/styles package.json package-lock.json ':!*.test.tsx'
+          git fetch --depth=1 origin ae655516c45429a0689fb1ee798c923c94c95fc1
+          git diff --exit-code ae655516c45429a0689fb1ee798c923c94c95fc1 HEAD -- src/design-system src/app src/components src/tools src/styles package.json package-lock.json
           npm run typecheck
           npm test
       - run: node scripts/ds-library/build.mjs
@@ -57,7 +59,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39239921799
+          run-id: 39246414221
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
@@ -79,7 +81,7 @@ jobs:
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('ds-library-v1-1/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':39239921799,'baselineCommit':'e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
+          (target/'preservation.json').write_text(json.dumps({'baselineRun':39246414221,'baselineCommit':'b842619efff1af32dcc2467235ee2c93487d33d6','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
           print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1-1/ updated.')
           PY
       - name: Compare all original playgrounds against preserved public V1
@@ -120,7 +122,7 @@ jobs:
           script: |
             const {data}=await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const previous=data.find(d=>d.sha!==context.sha);
-            if(!previous || previous.sha!=='e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d') throw new Error('Newer publication detected; refuse stale replacement');
+            if(!previous || previous.sha!=='b842619efff1af32dcc2467235ee2c93487d33d6') throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-public:
@@ -133,7 +135,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: ae655516c45429a0689fb1ee798c923c94c95fc1
+          ref: 8c9b567391a13eacd8ee4dc9ae63490465614218
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -149,7 +151,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='ae655516c45429a0689fb1ee798c923c94c95fc1'
+                  assert p['previewCommit']=='8c9b567391a13eacd8ee4dc9ae63490465614218'
                   break
               except Exception:
                   if attempt==11: raise
