@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 712e60feb5e8c6f3d65a5e4e5a0cf11cbd1d6e46
+          ref: f7f5b985d31de607367e4a2df64b79bece7e287f
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -85,7 +85,7 @@ jobs:
           mkdir -p preview-output/button-studio-01/evidence
           cp experiments/button-studio-01/dist/* preview-output/button-studio-01/
           cp experiments/button-studio-01/evidence/* preview-output/button-studio-01/evidence/
-          printf '%s\n' '712e60feb5e8c6f3d65a5e4e5a0cf11cbd1d6e46' > preview-output/button-studio-01/source-commit.txt
+          printf '%s\n' 'f7f5b985d31de607367e4a2df64b79bece7e287f' > preview-output/button-studio-01/source-commit.txt
           python3 - <<'PY'
           import pathlib,hashlib,json
           root=pathlib.Path('preview-output')
