@@ -1,4 +1,4 @@
-name: DS Button Lens 02 interactive preview
+name: Design System Library V1 integrated preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -24,40 +24,40 @@ jobs:
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data} = await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const latest=data.find(d=>d.sha !== context.sha);
-            if(!latest || latest.sha !== '5c3df59d79fa1591ee6724af583b935ea9e2e574') throw new Error('Preview changed; do not restore an older artifact');
+            if(!latest || latest.sha !== '319b6725bf730e20dbd6d01469fe5cdce33fd58a') throw new Error('Preview changed; do not restore an older artifact');
             const {data: statuses}=await github.rest.repos.listDeploymentStatuses({owner:context.repo.owner,repo:context.repo.repo,deployment_id:latest.id});
             if(statuses[0]?.state !== 'success') throw new Error('Baseline publication is not successful');
             core.info('Confirmed workflow Pages, preview-only host, latest successful baseline and shared concurrency lock.');
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: b773722f128d77b4b3195efe754f7b55bc26a7ca
+          ref: 62808f182479c947cf70e7e2918b5fba74b321ad
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - name: Verify unchanged Button and application boundary
+      - name: Verify unchanged production components and application boundary
         run: |
-          git fetch --depth=1 origin 8b0bc17fdc381f7db76c750ffc67abcf54e3eb61
-          git diff --exit-code 8b0bc17fdc381f7db76c750ffc67abcf54e3eb61 HEAD -- src/design-system/Button src/app src/styles
+          git fetch --depth=1 origin b773722f128d77b4b3195efe754f7b55bc26a7ca
+          git diff --exit-code b773722f128d77b4b3195efe754f7b55bc26a7ca HEAD -- src/design-system/Button src/app src/components src/header src/tools src/styles package.json package-lock.json ':!*.test.tsx'
           npm run typecheck
-          npm test -- src/design-system/Button/Button.test.tsx
-      - run: node experiments/ds-button-lens-02/build.mjs
+          npm test
+      - run: node scripts/ds-library/build.mjs
       - run: npx playwright install --with-deps chromium
-      - run: node experiments/ds-button-lens-02/check.mjs
+      - run: node scripts/ds-library/check-built.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ds-button-prepublication-evidence
-          path: experiments/ds-button-lens-02/evidence/
+          name: ds-library-prepublication-evidence
+          path: docs/ds-library/evidence/
           retention-days: 30
       - name: Restore the latest successful complete preview
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39213825389
+          run-id: 39224490021
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
@@ -69,17 +69,17 @@ jobs:
           import pathlib,hashlib,json,shutil
           root=pathlib.Path('preview-output')
           old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
-          for name in ['lens-02-clean-icon/index.html','rail-02-rounded/index.html','button-studio-01/index.html','dark-veil-lab/index.html','aperture-02-20261018/aperture-02.html','living-catalog-20261018/aperture.html']:
+          for name in ['lens-02-clean-icon/index.html','rail-02-rounded/index.html','button-studio-01/index.html','dark-veil-lab/index.html','aperture-02-20261018/aperture-02.html','living-catalog-20261018/aperture.html','ds-button-lens-02/index.html']:
               assert name in old,name
-          target=root/'ds-button-lens-02'
+          target=root/'ds-library-v1'
           assert not target.exists(), 'Never overwrite an existing preview'
-          shutil.copytree('experiments/ds-button-lens-02/dist',target)
-          shutil.copytree('experiments/ds-button-lens-02/evidence',target/'evidence')
+          shutil.copytree('dist',target)
+          shutil.copytree('docs/ds-library/evidence',target/'evidence')
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
-          assert all(name.startswith('ds-button-lens-02/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':39213825389,'baselineCommit':'5c3df59d79fa1591ee6724af583b935ea9e2e574','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
-          print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-button-lens-02/ added.')
+          assert all(name.startswith('ds-library-v1/') for name in current-set(old))
+          (target/'preservation.json').write_text(json.dumps({'baselineRun':39224490021,'baselineCommit':'319b6725bf730e20dbd6d01469fe5cdce33fd58a','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
+          print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1/ added.')
           PY
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -99,7 +99,7 @@ jobs:
           script: |
             const {data}=await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const previous=data.find(d=>d.sha!==context.sha);
-            if(!previous || previous.sha!=='5c3df59d79fa1591ee6724af583b935ea9e2e574') throw new Error('Newer publication detected; refuse stale replacement');
+            if(!previous || previous.sha!=='319b6725bf730e20dbd6d01469fe5cdce33fd58a') throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-public:
@@ -112,7 +112,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: b773722f128d77b4b3195efe754f7b55bc26a7ca
+          ref: 62808f182479c947cf70e7e2918b5fba74b321ad
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -127,13 +127,13 @@ jobs:
           base='https://iriskax.github.io/axolotl-preview/'
           for attempt in range(12):
               try:
-                  p=json.load(urllib.request.urlopen(base+'ds-button-lens-02/provenance.json',timeout=30))
-                  assert p['previewCommit']=='b773722f128d77b4b3195efe754f7b55bc26a7ca'
+                  p=json.load(urllib.request.urlopen(base+'ds-library-v1/provenance.json',timeout=30))
+                  assert p['previewCommit']=='62808f182479c947cf70e7e2918b5fba74b321ad'
                   break
               except Exception:
                   if attempt==11: raise
                   time.sleep(10)
-          proof=json.load(urllib.request.urlopen(base+'ds-button-lens-02/preservation.json',timeout=30))
+          proof=json.load(urllib.request.urlopen(base+'ds-library-v1/preservation.json',timeout=30))
           assert proof['allHashesMatch']
           routes={name:digest for name,digest in proof['previousFiles'].items() if name.endswith('.html') and name.count('/')<=1}
           def check(item):
@@ -147,12 +147,12 @@ jobs:
           print('All artifact files preserved:',proof['filesPreserved'])
           PY
       - name: Exercise the real public URL in Chromium
-        run: node experiments/ds-button-lens-02/check.mjs
+        run: node scripts/ds-library/check.mjs
         env:
-          BUTTON_PREVIEW_URL: https://iriskax.github.io/axolotl-preview/ds-button-lens-02/
+          LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ds-button-public-evidence
-          path: experiments/ds-button-lens-02/evidence/
+          name: ds-library-public-evidence
+          path: docs/ds-library/evidence/
           retention-days: 30
