@@ -24,14 +24,14 @@ jobs:
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data} = await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const latest=data.find(d=>d.sha !== context.sha);
-            if(!latest || latest.sha !== '06e3ca3cbccb3172a3ebaf1735fcfb17543c9ca7') throw new Error('Preview changed; do not restore an older artifact');
+            if(!latest || latest.sha !== 'e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d') throw new Error('Preview changed; do not restore an older artifact');
             const {data: statuses}=await github.rest.repos.listDeploymentStatuses({owner:context.repo.owner,repo:context.repo.repo,deployment_id:latest.id});
             if(statuses[0]?.state !== 'success') throw new Error('Baseline publication is not successful');
             core.info('Confirmed workflow Pages, preview-only host, latest successful baseline and shared concurrency lock.');
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 0b09649cac0057372af647468d3220135e5c0bd4
+          ref: ae655516c45429a0689fb1ee798c923c94c95fc1
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -57,29 +57,30 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39232485443
+          run-id: 39239921799
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
-      - name: Add one new directory and verify every existing file hash
+      - name: Update only V1.1 and verify every other preview file hash
         run: |
           mkdir preview-output
           tar --no-same-owner -xf previous-preview/artifact.tar -C preview-output
           python3 - <<'PY'
           import pathlib,hashlib,json,shutil
           root=pathlib.Path('preview-output')
-          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
+          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[0] != 'ds-library-v1-1'}
           for name in ['lens-02-clean-icon/index.html','rail-02-rounded/index.html','button-studio-01/index.html','dark-veil-lab/index.html','aperture-02-20261018/aperture-02.html','living-catalog-20261018/aperture.html','ds-button-lens-02/index.html','ds-library-v1/index.html']:
               assert name in old,name
           target=root/'ds-library-v1-1'
-          assert not target.exists(), 'Never overwrite an existing preview'
+          assert target.is_dir(), 'Expected existing V1.1 preview'
+          shutil.rmtree(target)
           shutil.copytree('dist',target)
           shutil.copytree('docs/ds-library/evidence',target/'evidence')
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('ds-library-v1-1/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':39232485443,'baselineCommit':'06e3ca3cbccb3172a3ebaf1735fcfb17543c9ca7','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
-          print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1-1/ added.')
+          (target/'preservation.json').write_text(json.dumps({'baselineRun':39239921799,'baselineCommit':'e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
+          print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1-1/ updated.')
           PY
       - name: Compare all original playgrounds against preserved public V1
         run: |
@@ -119,7 +120,7 @@ jobs:
           script: |
             const {data}=await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const previous=data.find(d=>d.sha!==context.sha);
-            if(!previous || previous.sha!=='06e3ca3cbccb3172a3ebaf1735fcfb17543c9ca7') throw new Error('Newer publication detected; refuse stale replacement');
+            if(!previous || previous.sha!=='e2c43a8bb67eb7129cb1ccd13739a5d1e111b45d') throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-public:
@@ -132,7 +133,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 0b09649cac0057372af647468d3220135e5c0bd4
+          ref: ae655516c45429a0689fb1ee798c923c94c95fc1
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -148,7 +149,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='0b09649cac0057372af647468d3220135e5c0bd4'
+                  assert p['previewCommit']=='ae655516c45429a0689fb1ee798c923c94c95fc1'
                   break
               except Exception:
                   if attempt==11: raise
