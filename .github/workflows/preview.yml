@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 4cbc3dedf6135edd46106f3439cf5ffc8e1f6153
+          ref: 13e9266ecdb5185780101533b9975e6316438b63
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -87,7 +87,7 @@ jobs:
           mkdir -p preview-output/lens-02-clean-icon/evidence
           cp experiments/lens-02-clean-icon/dist/* preview-output/lens-02-clean-icon/
           cp experiments/lens-02-clean-icon/evidence/* preview-output/lens-02-clean-icon/evidence/
-          printf '%s\n' '4cbc3dedf6135edd46106f3439cf5ffc8e1f6153' > preview-output/lens-02-clean-icon/source-commit.txt
+          printf '%s\n' '13e9266ecdb5185780101533b9975e6316438b63' > preview-output/lens-02-clean-icon/source-commit.txt
           python3 - <<'PY'
           import pathlib,hashlib,json
           root=pathlib.Path('preview-output')
