@@ -101,7 +101,7 @@ jobs:
         with:
           path: preview-output
   deploy:
-    if: false
+    if: true
     needs: build
     runs-on: ubuntu-latest
     environment:
