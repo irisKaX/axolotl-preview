@@ -1,4 +1,4 @@
-name: Creative App Concepts preview
+name: Playground Evolution V1 preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -17,26 +17,6 @@ jobs:
     outputs:
       baseline_sha: ${{ steps.baseline.outputs.sha }}
     steps:
-      - name: Settle the abandoned Pages attempt that blocks publication
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if(context.repo.repo !== 'axolotl-preview') throw new Error('Preview repository only');
-            const args={...context.repo,deploymentId:'fdb01603614ccc8b769dbeee958e9ceba0a80406'};
-            const route='GET /repos/{owner}/{repo}/pages/deployments/{deploymentId}';
-            let status;
-            try { status=(await github.request(route,args)).data.status; }
-            catch(error) { if(error.status===404) return; throw error; }
-            const terminal=['succeed','deployment_cancelled','deployment_failed','deployment_perms_error','deployment_content_failed','deployment_lost'];
-            core.notice(`Original concept deployment status: ${status}`);
-            if(terminal.includes(status)) return;
-            await github.request('POST /repos/{owner}/{repo}/pages/deployments/{deploymentId}/cancel',args);
-            for(let attempt=0;attempt<8;attempt++) {
-              await new Promise(resolve=>setTimeout(resolve,5000));
-              status=(await github.request(route,args)).data.status;
-              if(terminal.includes(status)) { core.notice(`Abandoned attempt settled: ${status}`); return; }
-            }
-            throw new Error(`The abandoned Pages attempt is still ${status}`);
       - name: Locate the current successful preview artifact
         id: baseline
         uses: actions/github-script@v7
@@ -76,21 +56,22 @@ jobs:
           node-version: '24'
       - name: Prepare the short browser check
         run: |
-          node --check creative-concepts/shared/app.js
+          node --check creative-concepts/modular-playground/playground.js
+          node --check creative-concepts/modular-playground/approved-header/header.js
           npm install --prefix .preview-check --no-package-lock --no-audit --no-fund playwright@1.64.1
           node .preview-check/node_modules/playwright/cli.js install --with-deps chromium
-      - name: Check the three interactive concepts
+      - name: Check the Playground header and themes
         env:
           PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
         run: |
-          python3 -m http.server 4188 --bind 127.0.0.1 >/tmp/concept-server.log 2>&1 &
+          python3 -m http.server 4190 --bind 127.0.0.1 >/tmp/concept-server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID"' EXIT
           for attempt in $(seq 1 20); do
-            curl --fail --silent http://127.0.0.1:4188/creative-concepts/immersive-studio/ >/dev/null && break
+            curl --fail --silent http://127.0.0.1:4190/creative-concepts/modular-playground/ >/dev/null && break
             sleep 1
           done
-          node scripts/check-concepts.cjs
+          node scripts/check-playground.cjs
       - name: Restore the current complete preview
         uses: actions/download-artifact@v4
         with:
@@ -99,7 +80,7 @@ jobs:
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
-      - name: Add only the isolated creative concepts
+      - name: Replace only Modular Playground
         env:
           PREVIEW_SHA: ${{ github.sha }}
           BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
@@ -109,16 +90,19 @@ jobs:
           python3 - <<'PYCODE'
           import pathlib,hashlib,json,shutil,os
           root=pathlib.Path('preview-output')
-          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[0] != 'creative-concepts'}
+          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and not str(p.relative_to(root)).startswith('creative-concepts/modular-playground/')}
           assert 'ds-library-v1-1/index.html' in old
           assert 'ds-library-v1-1/provenance.json' in old
-          target=root/'creative-concepts'
-          if target.exists(): shutil.rmtree(target)
-          shutil.copytree('creative-concepts',target)
-          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concepts':['immersive-studio','modular-playground','spatial-workspace'],'previousFilesPreserved':len(old)},indent=2))
+          assert 'creative-concepts/immersive-studio/index.html' in old
+          assert 'creative-concepts/spatial-workspace/index.html' in old
+          target=root/'creative-concepts/modular-playground'
+          assert target.is_dir(), 'Existing Playground required'
+          shutil.rmtree(target)
+          shutil.copytree('creative-concepts/modular-playground',target)
+          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'V1','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
-          assert all(name.startswith('creative-concepts/') for name in current-set(old))
+          assert all(name.startswith('creative-concepts/modular-playground/') for name in current-set(old))
           print(f'Preserved all {len(old)} existing preview files byte-for-byte.')
           PYCODE
       - uses: actions/configure-pages@v5
@@ -178,7 +162,7 @@ jobs:
         run: |
           python3 - <<'PYCODE'
           import urllib.request,json,time,os
-          url='https://iriskax.github.io/axolotl-preview/creative-concepts/provenance.json'
+          url='https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/provenance.json'
           for attempt in range(12):
               try:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
@@ -188,8 +172,8 @@ jobs:
                   if attempt==11: raise
                   time.sleep(10)
           PYCODE
-      - name: Check the three public concepts
-        run: node scripts/check-concepts.cjs
+      - name: Check the updated public Playground
+        run: node scripts/check-playground.cjs
         env:
           PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
-          CONCEPTS_URL: https://iriskax.github.io/axolotl-preview/creative-concepts/
+          PLAYGROUND_URL: https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/
