@@ -26,10 +26,16 @@ jobs:
             const {data: pages} = await github.rest.repos.getPages(context.repo);
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data: deployments} = await github.rest.repos.listDeployments({...context.repo,environment:'github-pages',per_page:100});
-            const latest = deployments.find(d => d.sha !== context.sha);
+            let latest;
+            for(const candidate of deployments.filter(d => d.sha !== context.sha)) {
+              const {data: statuses} = await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
+              // This exact attempt failed to create a Pages deployment with HTTP 500.
+              if(candidate.sha === 'fdb01603614ccc8b769dbeee958e9ceba0a80406' && ['failure','error'].includes(statuses[0]?.state)) continue;
+              if(statuses[0]?.state !== 'success') throw new Error('Latest publication is not successful; preserve it for review');
+              latest = candidate;
+              break;
+            }
             if(!latest) throw new Error('No baseline publication');
-            const {data: statuses} = await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:latest.id});
-            if(statuses[0]?.state !== 'success') throw new Error('Latest publication is not successful; preserve it for review');
             const {data: runs} = await github.rest.actions.listWorkflowRunsForRepo({...context.repo,head_sha:latest.sha,per_page:100});
             for(const run of runs.workflow_runs) {
               const {data} = await github.rest.actions.listWorkflowRunArtifacts({...context.repo,run_id:run.id});
@@ -104,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     steps:
       - name: Recheck publication before replacement
         uses: actions/github-script@v7
@@ -113,10 +119,23 @@ jobs:
         with:
           script: |
             const {data}=await github.rest.repos.listDeployments({...context.repo,environment:'github-pages',per_page:100});
-            const previous=data.find(d=>d.sha!==context.sha);
+            let previous;
+            for(const candidate of data.filter(d=>d.sha!==context.sha)) {
+              const {data:statuses}=await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
+              if(candidate.sha==='fdb01603614ccc8b769dbeee958e9ceba0a80406' && ['failure','error'].includes(statuses[0]?.state)) continue;
+              previous=candidate;
+              break;
+            }
             if(!previous || previous.sha!==process.env.BASELINE_SHA) throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
+        continue-on-error: true
+      - name: Allow a transient Pages server error to settle
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 20
+      - uses: actions/deploy-pages@v4
+        if: steps.deployment.outcome == 'failure'
+        id: deployment_retry
   verify-public:
     needs: deploy
     runs-on: ubuntu-latest
