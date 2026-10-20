@@ -1,4 +1,4 @@
-name: Design System Library V1.1 Dashboard Widgets preview
+name: Design System Library V1.1 Dashboard Layout Studio preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -24,14 +24,14 @@ jobs:
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data} = await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const latest=data.find(d=>d.sha !== context.sha);
-            if(!latest || latest.sha !== 'd9a804b1d72fad840b110af3956e799515416ece') throw new Error('Preview changed; do not restore an older artifact');
+            if(!latest || latest.sha !== '6befbb4ff8455793a26b76924b0e8eab5b0e6b60') throw new Error('Preview changed; do not restore an older artifact');
             const {data: statuses}=await github.rest.repos.listDeploymentStatuses({owner:context.repo.owner,repo:context.repo.repo,deployment_id:latest.id});
             if(statuses[0]?.state !== 'success') throw new Error('Baseline publication is not successful');
             core.info('Confirmed workflow Pages, preview-only host, latest successful baseline and shared concurrency lock.');
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: fbdd839acc9ccd150d2c63e7af336a975e0d177c
+          ref: 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -40,9 +40,9 @@ jobs:
       - run: npm ci
       - name: Verify unchanged production components and application boundary
         run: |
-          git fetch --depth=1 origin e720bfd3d171b2121fc833024bc9a139507d854a
-          git diff --exit-code e720bfd3d171b2121fc833024bc9a139507d854a HEAD -- src/app src/components src/header src/tools src/styles package.json package-lock.json
-          git diff --exit-code e720bfd3d171b2121fc833024bc9a139507d854a HEAD -- src/design-system/Button src/design-system/library src/pages/design-system/library/NavigationPage.tsx src/pages/design-system/library/colors
+          git fetch --depth=1 origin fbdd839acc9ccd150d2c63e7af336a975e0d177c
+          git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/app src/components src/header src/tools src/styles package.json package-lock.json
+          git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/design-system/widgets src/design-system/Button src/design-system/library src/pages/design-system/library/NavigationPage.tsx src/pages/design-system/library/colors
           npm run typecheck
           npm test
       - run: node scripts/ds-library/build.mjs
@@ -58,7 +58,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39380840595
+          run-id: 39381963598
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
@@ -81,7 +81,7 @@ jobs:
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('ds-library-v1-1/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':39380840595,'baselineCommit':'d9a804b1d72fad840b110af3956e799515416ece','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
+          (target/'preservation.json').write_text(json.dumps({'baselineRun':39381963598,'baselineCommit':'6befbb4ff8455793a26b76924b0e8eab5b0e6b60','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
           print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1-1/ updated.')
           PY
       - name: Compare Navigation reference against the previous public V1.1
@@ -125,7 +125,7 @@ jobs:
           script: |
             const {data}=await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const previous=data.find(d=>d.sha!==context.sha);
-            if(!previous || previous.sha!=='d9a804b1d72fad840b110af3956e799515416ece') throw new Error('Newer publication detected; refuse stale replacement');
+            if(!previous || previous.sha!=='6befbb4ff8455793a26b76924b0e8eab5b0e6b60') throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-public:
@@ -138,7 +138,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: fbdd839acc9ccd150d2c63e7af336a975e0d177c
+          ref: 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -154,7 +154,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='fbdd839acc9ccd150d2c63e7af336a975e0d177c'
+                  assert p['previewCommit']=='01fa18964ecf08de83c47234cb4ce7d81cbe45ec'
                   break
               except Exception:
                   if attempt==11: raise
@@ -172,8 +172,8 @@ jobs:
           print('Public preserved HTML routes:',verified)
           print('All artifact files preserved:',proof['filesPreserved'])
           PY
-      - name: Exercise the real public URL in Chromium
-        run: node scripts/ds-library/check.mjs
+      - name: Exercise Layout Studio and catalog navigation on the real public URL
+        run: node scripts/ds-library/check-layout-only.mjs
         env:
           LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/
       - uses: actions/upload-artifact@v4
