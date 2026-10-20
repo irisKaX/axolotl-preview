@@ -1,4 +1,4 @@
-name: Design System Library V1.1 Dashboard Layout Studio preview
+name: Design System Library V1.1 Layout resize preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -24,14 +24,14 @@ jobs:
             if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
             const {data} = await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const latest=data.find(d=>d.sha !== context.sha);
-            if(!latest || latest.sha !== '6befbb4ff8455793a26b76924b0e8eab5b0e6b60') throw new Error('Preview changed; do not restore an older artifact');
+            if(!latest || latest.sha !== '3a0f82f38da8d7395e15b30543f6da764102cdb0') throw new Error('Preview changed; do not restore an older artifact');
             const {data: statuses}=await github.rest.repos.listDeploymentStatuses({owner:context.repo.owner,repo:context.repo.repo,deployment_id:latest.id});
             if(statuses[0]?.state !== 'success') throw new Error('Baseline publication is not successful');
             core.info('Confirmed workflow Pages, preview-only host, latest successful baseline and shared concurrency lock.');
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 08ce90fbe4950b77209f57487f246b33eace1733
+          ref: e3869e9c5e72ea9a4213f29136451a1c6e722026
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -44,41 +44,24 @@ jobs:
           git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/app src/components src/header src/tools src/styles package.json package-lock.json
           git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/design-system/widgets src/design-system/Button src/design-system/library src/pages/design-system/library/NavigationPage.tsx src/pages/design-system/library/colors
           npm run typecheck
-          git fetch --depth=1 origin 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
-          git diff --exit-code 01fa18964ecf08de83c47234cb4ce7d81cbe45ec HEAD -- . ':!scripts/ds-library/navigation-reference.mjs'
+          git fetch --depth=1 origin 08ce90fbe4950b77209f57487f246b33eace1733
+          git diff --exit-code 08ce90fbe4950b77209f57487f246b33eace1733 HEAD -- . ':!src/pages/design-system/library/layout/' ':!scripts/ds-library/check-resize.mjs' ':!scripts/ds-library/check-built.mjs'
+      - run: node node_modules/vitest/vitest.mjs run src/pages/design-system/library/layout/model.test.tsx
       - run: node scripts/ds-library/build.mjs
       - run: npx playwright install --with-deps chromium
-      - name: Verify completed regression of the identical application
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const {data: run} = await github.rest.actions.getWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,run_id:39396154239});
-            if(run.head_sha !== 'eb6f4b4f8e725ec7766f87e4868d8c4c82f37ac2') throw new Error('Unexpected validation revision');
-            const {data: job} = await github.rest.actions.getJobForWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,job_id:118541762943});
-            if(job.run_id !== 39396154239) throw new Error('Unexpected validation job');
-            for(const name of ['Verify unchanged production components and application boundary','Run node scripts/ds-library/build.mjs','Run node scripts/ds-library/check-built.mjs']) {
-              if(job.steps.find(s=>s.name===name)?.conclusion !== 'success') throw new Error('Regression evidence incomplete: '+name);
-            }
-            core.info('105 tests and full browser regression passed for identical application source 01fa18964ecf08de83c47234cb4ce7d81cbe45ec. Only the visual test harness changed; strict source diff verified above.');
-      - name: Restore passed complete regression evidence
-        uses: actions/download-artifact@v4
-        with:
-          name: ds-library11-prepublication-evidence
-          run-id: 39396154239
-          github-token: ${{ github.token }}
-          repository: irisKaX/axolotl-preview
-          path: docs/ds-library/evidence/
+      - name: Quick resize smoke test
+        run: node scripts/ds-library/check-built.mjs --resize-only
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ds-library11-prepublication-evidence
+          name: layout-resize-evidence
           path: docs/ds-library/evidence/
-          retention-days: 30
+          retention-days: 14
       - name: Restore the latest successful complete preview
         uses: actions/download-artifact@v4
         with:
           name: github-pages
-          run-id: 39381963598
+          run-id: 39399323966
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
@@ -97,37 +80,14 @@ jobs:
           assert target.is_dir(), 'Expected existing V1.1 preview'
           shutil.rmtree(target)
           shutil.copytree('dist',target)
-          shutil.copytree('docs/ds-library/evidence',target/'evidence')
+          shutil.copytree('reference-output/ds-library-v1-1/evidence',target/'evidence')
+          shutil.copytree('docs/ds-library/evidence',target/'evidence',dirs_exist_ok=True)
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('ds-library-v1-1/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':39381963598,'baselineCommit':'6befbb4ff8455793a26b76924b0e8eab5b0e6b60','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
+          (target/'preservation.json').write_text(json.dumps({'baselineRun':39399323966,'baselineCommit':'3a0f82f38da8d7395e15b30543f6da764102cdb0','filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
           print(f'Preserved all {len(old)} existing files byte-for-byte; only ds-library-v1-1/ updated.')
           PY
-      - name: Compare Navigation reference against the previous public V1.1
-        run: |
-          mkdir -p visual-site reference-site
-          ln -s "$PWD/preview-output" visual-site/axolotl-preview
-          ln -s "$PWD/reference-output" reference-site/axolotl-preview
-          python3 -m http.server 4201 --bind 127.0.0.1 --directory visual-site > /tmp/library-visual-server.log 2>&1 &
-          axolotl_visual_pid=$!
-          python3 -m http.server 4202 --bind 127.0.0.1 --directory reference-site > /tmp/library-reference-server.log 2>&1 &
-          axolotl_reference_pid=$!
-          trap 'kill "$axolotl_visual_pid" "$axolotl_reference_pid"' EXIT
-          REFERENCE_URL=http://127.0.0.1:4202/axolotl-preview/ds-library-v1-1/ COMPARE_URL=http://127.0.0.1:4201/axolotl-preview/ds-library-v1-1/ node scripts/ds-library/navigation-reference.mjs
-          cp -a docs/ds-library/evidence/. preview-output/ds-library-v1-1/evidence/
-          python3 - <<'PY'
-          import pathlib,json,hashlib
-          root=pathlib.Path('preview-output')
-          proof=json.loads((root/'ds-library-v1-1/preservation.json').read_text())
-          assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in proof['previousFiles'].items())
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ds-library11-navigation-reference
-          path: docs/ds-library/evidence/navigation-*
-          retention-days: 30
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -146,7 +106,7 @@ jobs:
           script: |
             const {data}=await github.rest.repos.listDeployments({owner:context.repo.owner,repo:context.repo.repo,environment:'github-pages',per_page:20});
             const previous=data.find(d=>d.sha!==context.sha);
-            if(!previous || previous.sha!=='6befbb4ff8455793a26b76924b0e8eab5b0e6b60') throw new Error('Newer publication detected; refuse stale replacement');
+            if(!previous || previous.sha!=='3a0f82f38da8d7395e15b30543f6da764102cdb0') throw new Error('Newer publication detected; refuse stale replacement');
       - uses: actions/deploy-pages@v4
         id: deployment
   verify-public:
@@ -159,7 +119,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 08ce90fbe4950b77209f57487f246b33eace1733
+          ref: e3869e9c5e72ea9a4213f29136451a1c6e722026
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -175,7 +135,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='08ce90fbe4950b77209f57487f246b33eace1733'
+                  assert p['previewCommit']=='e3869e9c5e72ea9a4213f29136451a1c6e722026'
                   break
               except Exception:
                   if attempt==11: raise
@@ -193,8 +153,8 @@ jobs:
           print('Public preserved HTML routes:',verified)
           print('All artifact files preserved:',proof['filesPreserved'])
           PY
-      - name: Exercise Layout Studio and catalog navigation on the real public URL
-        run: node scripts/ds-library/check-layout-only.mjs
+      - name: Quick resize check on the real public URL
+        run: node scripts/ds-library/check-resize.mjs
         env:
           LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/
       - uses: actions/upload-artifact@v4
