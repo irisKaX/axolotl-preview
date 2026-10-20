@@ -1,4 +1,4 @@
-name: Dashboard Grid Rebuild preview
+name: Creative App Concepts preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     outputs:
       baseline_sha: ${{ steps.baseline.outputs.sha }}
     steps:
@@ -43,23 +43,27 @@ jobs:
             throw new Error('Current publication artifact is unavailable; do not restore an older preview');
       - uses: actions/checkout@v4
         with:
-          repository: irisKaX/axolotl-2
-          ref: 29fd04501ce5174040325e0a21443e6f9058d3b0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
-      - name: Check the Layout Studio change boundary
+      - name: Prepare the short browser check
         run: |
-          git fetch --depth=1 origin 6a21670d09a15135c3b1b0d9ba721f2ebb889930
-          git diff --exit-code 6a21670d09a15135c3b1b0d9ba721f2ebb889930 HEAD -- . ':!package.json' ':!package-lock.json' ':!src/pages/design-system/library/layout/' ':!src/pages/design-system/library/registry.tsx' ':!scripts/ds-library/check-grid.mjs' ':!scripts/ds-library/check-built.mjs'
-      - run: node node_modules/vitest/vitest.mjs run src/pages/design-system/library/layout/model.test.tsx src/pages/design-system/library/layout/LayoutStudio.test.tsx
-      - run: node scripts/ds-library/build.mjs
-      - run: npx playwright install --with-deps chromium
-      - name: Short grid interaction check
-        run: node scripts/ds-library/check-built.mjs --grid-only
+          node --check creative-concepts/shared/app.js
+          npm install --prefix .preview-check --no-package-lock --no-audit --no-fund playwright@1.64.1
+          node .preview-check/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Check the three interactive concepts
+        env:
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
+        run: |
+          python3 -m http.server 4188 --bind 127.0.0.1 >/tmp/concept-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for attempt in $(seq 1 20); do
+            curl --fail --silent http://127.0.0.1:4188/creative-concepts/immersive-studio/ >/dev/null && break
+            sleep 1
+          done
+          node scripts/check-concepts.cjs
       - name: Restore the current complete preview
         uses: actions/download-artifact@v4
         with:
@@ -68,33 +72,28 @@ jobs:
           github-token: ${{ github.token }}
           repository: irisKaX/axolotl-preview
           path: previous-preview
-      - name: Replace only the existing V1.1 preview
+      - name: Add only the isolated creative concepts
         env:
-          BASELINE_RUN: ${{ steps.baseline.outputs.run }}
+          PREVIEW_SHA: ${{ github.sha }}
           BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
         run: |
           mkdir preview-output
           tar --no-same-owner -xf previous-preview/artifact.tar -C preview-output
-          python3 - <<'PY'
+          python3 - <<'PYCODE'
           import pathlib,hashlib,json,shutil,os
           root=pathlib.Path('preview-output')
-          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[0] != 'ds-library-v1-1'}
-          for name in ['lens-02-clean-icon/index.html','rail-02-rounded/index.html','button-studio-01/index.html','dark-veil-lab/index.html','aperture-02-20261018/aperture-02.html','living-catalog-20261018/aperture.html','ds-button-lens-02/index.html','ds-library-v1/index.html']:
-              assert name in old,name
-          target=root/'ds-library-v1-1'
-          assert target.is_dir(), 'Expected existing V1.1 preview'
-          if (target/'evidence').is_dir():
-              shutil.copytree(target/'evidence','retained-evidence')
-          shutil.rmtree(target)
-          shutil.copytree('dist',target)
-          if pathlib.Path('retained-evidence').exists():
-              shutil.copytree('retained-evidence',target/'evidence')
+          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[0] != 'creative-concepts'}
+          assert 'ds-library-v1-1/index.html' in old
+          assert 'ds-library-v1-1/provenance.json' in old
+          target=root/'creative-concepts'
+          if target.exists(): shutil.rmtree(target)
+          shutil.copytree('creative-concepts',target)
+          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concepts':['immersive-studio','modular-playground','spatial-workspace'],'previousFilesPreserved':len(old)},indent=2))
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
-          assert all(name.startswith('ds-library-v1-1/') for name in current-set(old))
-          (target/'preservation.json').write_text(json.dumps({'baselineRun':int(os.environ['BASELINE_RUN']),'baselineCommit':os.environ['BASELINE_SHA'],'filesPreserved':len(old),'allHashesMatch':True,'previousFiles':old},indent=2))
-          print(f'Preserved all {len(old)} other preview files byte-for-byte.')
-          PY
+          assert all(name.startswith('creative-concepts/') for name in current-set(old))
+          print(f'Preserved all {len(old)} existing preview files byte-for-byte.')
+          PYCODE
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
@@ -127,30 +126,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: irisKaX/axolotl-2
-          ref: 29fd04501ce5174040325e0a21443e6f9058d3b0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npm install --prefix .preview-check --no-package-lock --no-audit --no-fund playwright@1.64.1
+      - run: node .preview-check/node_modules/playwright/cli.js install --with-deps chromium
       - name: Verify the published version
+        env:
+          PREVIEW_SHA: ${{ github.sha }}
         run: |
-          python3 - <<'PY'
-          import urllib.request,json,time
-          url='https://iriskax.github.io/axolotl-preview/ds-library-v1-1/provenance.json'
+          python3 - <<'PYCODE'
+          import urllib.request,json,time,os
+          url='https://iriskax.github.io/axolotl-preview/creative-concepts/provenance.json'
           for attempt in range(12):
               try:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
-                  assert data['previewCommit']=='29fd04501ce5174040325e0a21443e6f9058d3b0'
+                  assert data['previewCommit']==os.environ['PREVIEW_SHA']
                   break
               except Exception:
                   if attempt==11: raise
                   time.sleep(10)
-          PY
-      - name: Verify interactions on the existing public preview
-        run: node scripts/ds-library/check-grid.mjs
+          PYCODE
+      - name: Check the three public concepts
+        run: node scripts/check-concepts.cjs
         env:
-          LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/
+          PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
+          CONCEPTS_URL: https://iriskax.github.io/axolotl-preview/creative-concepts/
