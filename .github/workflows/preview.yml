@@ -17,6 +17,26 @@ jobs:
     outputs:
       baseline_sha: ${{ steps.baseline.outputs.sha }}
     steps:
+      - name: Settle the abandoned Pages attempt that blocks publication
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if(context.repo.repo !== 'axolotl-preview') throw new Error('Preview repository only');
+            const args={...context.repo,deploymentId:'fdb01603614ccc8b769dbeee958e9ceba0a80406'};
+            const route='GET /repos/{owner}/{repo}/pages/deployments/{deploymentId}';
+            let status;
+            try { status=(await github.request(route,args)).data.status; }
+            catch(error) { if(error.status===404) return; throw error; }
+            const terminal=['succeed','deployment_cancelled','deployment_failed','deployment_perms_error','deployment_content_failed','deployment_lost'];
+            core.notice(`Original concept deployment status: ${status}`);
+            if(terminal.includes(status)) return;
+            await github.request('POST /repos/{owner}/{repo}/pages/deployments/{deploymentId}/cancel',args);
+            for(let attempt=0;attempt<8;attempt++) {
+              await new Promise(resolve=>setTimeout(resolve,5000));
+              status=(await github.request(route,args)).data.status;
+              if(terminal.includes(status)) { core.notice(`Abandoned attempt settled: ${status}`); return; }
+            }
+            throw new Error(`The abandoned Pages attempt is still ${status}`);
       - name: Locate the current successful preview artifact
         id: baseline
         uses: actions/github-script@v7
@@ -29,8 +49,9 @@ jobs:
             let latest;
             for(const candidate of deployments.filter(d => d.sha !== context.sha)) {
               const {data: statuses} = await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
-              // This exact attempt failed to create a Pages deployment with HTTP 500.
-              if(candidate.sha === 'fdb01603614ccc8b769dbeee958e9ceba0a80406' && ['failure','error'].includes(statuses[0]?.state)) continue;
+              // These known attempts failed with HTTP 500, then HTTP 400 for that stranded attempt.
+              // Both verified artifacts preserve every earlier preview outside creative-concepts/.
+              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
               if(statuses[0]?.state !== 'success') throw new Error('Latest publication is not successful; preserve it for review');
               latest = candidate;
               break;
@@ -122,7 +143,7 @@ jobs:
             let previous;
             for(const candidate of data.filter(d=>d.sha!==context.sha)) {
               const {data:statuses}=await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
-              if(candidate.sha==='fdb01603614ccc8b769dbeee958e9ceba0a80406' && ['failure','error'].includes(statuses[0]?.state)) continue;
+              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
               previous=candidate;
               break;
             }
