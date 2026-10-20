@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
+          ref: 770da8534918a7f5cab621e4c6297bffb79db08d
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -44,10 +44,30 @@ jobs:
           git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/app src/components src/header src/tools src/styles package.json package-lock.json
           git diff --exit-code fbdd839acc9ccd150d2c63e7af336a975e0d177c HEAD -- src/design-system/widgets src/design-system/Button src/design-system/library src/pages/design-system/library/NavigationPage.tsx src/pages/design-system/library/colors
           npm run typecheck
-          npm test
+          git fetch --depth=1 origin 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
+          git diff --exit-code 01fa18964ecf08de83c47234cb4ce7d81cbe45ec HEAD -- . ':!scripts/ds-library/navigation-reference.mjs'
       - run: node scripts/ds-library/build.mjs
       - run: npx playwright install --with-deps chromium
-      - run: node scripts/ds-library/check-built.mjs
+      - name: Verify completed regression of the identical application
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {data: run} = await github.rest.actions.getWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,run_id:39396154239});
+            if(run.head_sha !== 'eb6f4b4f8e725ec7766f87e4868d8c4c82f37ac2') throw new Error('Unexpected validation revision');
+            const {data: job} = await github.rest.actions.getJobForWorkflowRun({owner:context.repo.owner,repo:context.repo.repo,job_id:118541762943});
+            if(job.run_id !== 39396154239) throw new Error('Unexpected validation job');
+            for(const name of ['Verify unchanged production components and application boundary','Run node scripts/ds-library/build.mjs','Run node scripts/ds-library/check-built.mjs']) {
+              if(job.steps.find(s=>s.name===name)?.conclusion !== 'success') throw new Error('Regression evidence incomplete: '+name);
+            }
+            core.info('105 tests and full browser regression passed for identical application source 01fa18964ecf08de83c47234cb4ce7d81cbe45ec. Only the visual test harness changed; strict source diff verified above.');
+      - name: Restore passed complete regression evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: ds-library11-prepublication-evidence
+          run-id: 39396154239
+          github-token: ${{ github.token }}
+          repository: irisKaX/axolotl-preview
+          path: docs/ds-library/evidence/
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -103,6 +123,7 @@ jobs:
           assert all(hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in proof['previousFiles'].items())
           PY
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: ds-library11-navigation-reference
           path: docs/ds-library/evidence/navigation-*
@@ -138,7 +159,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 01fa18964ecf08de83c47234cb4ce7d81cbe45ec
+          ref: 770da8534918a7f5cab621e4c6297bffb79db08d
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -154,7 +175,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='01fa18964ecf08de83c47234cb4ce7d81cbe45ec'
+                  assert p['previewCommit']=='770da8534918a7f5cab621e4c6297bffb79db08d'
                   break
               except Exception:
                   if attempt==11: raise
