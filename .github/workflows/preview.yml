@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: b1f7c3d67c18b41028575a2ca2a6c7d2db2dd3d4
+          ref: 29fd04501ce5174040325e0a21443e6f9058d3b0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -128,7 +128,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: b1f7c3d67c18b41028575a2ca2a6c7d2db2dd3d4
+          ref: 29fd04501ce5174040325e0a21443e6f9058d3b0
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -144,7 +144,7 @@ jobs:
           for attempt in range(12):
               try:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
-                  assert data['previewCommit']=='b1f7c3d67c18b41028575a2ca2a6c7d2db2dd3d4'
+                  assert data['previewCommit']=='29fd04501ce5174040325e0a21443e6f9058d3b0'
                   break
               except Exception:
                   if attempt==11: raise
