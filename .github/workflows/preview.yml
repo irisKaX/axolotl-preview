@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 770da8534918a7f5cab621e4c6297bffb79db08d
+          ref: 08ce90fbe4950b77209f57487f246b33eace1733
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -159,7 +159,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: 770da8534918a7f5cab621e4c6297bffb79db08d
+          ref: 08ce90fbe4950b77209f57487f246b33eace1733
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -175,7 +175,7 @@ jobs:
           for attempt in range(12):
               try:
                   p=json.load(urllib.request.urlopen(base+'ds-library-v1-1/provenance.json',timeout=30))
-                  assert p['previewCommit']=='770da8534918a7f5cab621e4c6297bffb79db08d'
+                  assert p['previewCommit']=='08ce90fbe4950b77209f57487f246b33eace1733'
                   break
               except Exception:
                   if attempt==11: raise
