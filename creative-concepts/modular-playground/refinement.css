@@ -76,7 +76,7 @@ body[data-concept="playground"] main[data-view="dashboard"] .section-head .butto
   background: var(--pg-white);
 }
 /* Five supporting modules: satin surfaces, directional light, soft contact shadows. */
-body[data-concept="playground"] main[data-view="dashboard"] .card:not(.office) {
+body[data-concept="playground"] main[data-view="dashboard"] :where(.card:not(.office)) {
   --ink: var(--pg-fg);
   --muted: var(--pg-secondary);
   --line: var(--pg-edge);
