@@ -160,3 +160,25 @@ body[data-concept="playground"] {
   --pg-surface-light-a:0% 0%;
   --pg-surface-light-b:100% 100%;
 }
+
+/* Dashboard-only scale balance; preserve the approved header on other views. */
+body:has(main[data-view="dashboard"]) #approved-header header {
+  min-height:72px;
+  padding-block:12px;
+}
+body:has(main[data-view="dashboard"]) #approved-header .axolotl-pill-nav {
+  --pn-h:48px!important;
+  --pn-inner:48px!important;
+  --pn-font:calc(15px * var(--axo-text-scale))!important;
+}
+body:has(main[data-view="dashboard"]) #approved-header .axolotl-pill-nav__item { height:42px; min-width:42px; }
+body:has(main[data-view="dashboard"]) #approved-header .axolotl-pill-nav__slot:first-child .axolotl-pill-nav__item { width:42px; }
+body:has(main[data-view="dashboard"]) #approved-header :is(.axolotl-pill-nav__face,.axolotl-pill-nav__face-alt) > svg:first-child,
+body:has(main[data-view="dashboard"]) #approved-header button:is([aria-label="Upozornění"],[aria-label="Nastavení"]) > svg { width:20px; height:20px; }
+body:has(main[data-view="dashboard"]) #approved-header button:is([aria-label="Upozornění"],[aria-label="Nastavení"]) { width:48px; height:48px; }
+body:has(main[data-view="dashboard"]) #approved-header header form { min-height:42px; }
+body:has(main[data-view="dashboard"]) #approved-header header form input { height:42px; font-size:calc(14px * var(--axo-text-scale)); }
+body:has(main[data-view="dashboard"]) #approved-header header form button { height:42px; }
+body:has(main[data-view="dashboard"]) #approved-header header label:has(> input[aria-label="Tmavý režim"]) { width:72px; height:48px; }
+body:has(main[data-view="dashboard"]) #approved-header header label:has(> input[aria-label="Tmavý režim"]) > span { width:64px; height:42px; padding:7px; }
+body:has(main[data-view="dashboard"]) #approved-header input[aria-label="Tmavý režim"]:checked + span > span { transform:translateX(22px); }

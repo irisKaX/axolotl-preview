@@ -4,7 +4,12 @@ body[data-concept="playground"]:has(main[data-view="dashboard"]) {
   flex-direction: column;
   height: 100dvh;
 }
-body:has(.final-bento) #approved-header { flex: none; }
+/* The existing ResizeObserver supplies the actual fixed header bottom.
+   Flex assigns the remaining viewport height to the grid, including its footer inset. */
+body:has(.final-bento) #approved-header {
+  flex: none;
+  height: calc(var(--pg-header-bottom, 92px) + 16px);
+}
 body:has(.final-bento) #app { flex: 1; min-height: 0; }
 body:has(.final-bento) .app-shell {
   width: 100%;
@@ -19,7 +24,7 @@ body[data-concept="playground"] main .final-bento {
   /* First track ends at the lower 50/50 split; the narrow second track
      extends Office to 56% without changing the two equal lower cards. */
   grid-template-columns: minmax(0, calc(50% - var(--bento-gap) / 2)) minmax(0, calc(6% - var(--bento-gap))) repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(2, minmax(0, .285fr)) minmax(0, .43fr);
+  grid-template-rows: repeat(2, minmax(0, .28fr)) minmax(0, .44fr);
   grid-template-areas: "office office one two" "office office three four" "five six six six";
   gap: var(--bento-gap);
 }
