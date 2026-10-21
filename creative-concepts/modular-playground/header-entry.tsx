@@ -1,5 +1,5 @@
-// Preview adapter only. AppHeader, PillNav and their styles are built unchanged from axolotl-2/main.
-import { useEffect, useState } from 'react';
+// Preview adapter. The pinned production Header receives only the local PanelHeading polish patch.
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppHeader } from '@approved/app/header/AppHeader';
 import { PreferencesProvider, usePreferences } from '@approved/app/PreferencesProvider';
@@ -30,6 +30,15 @@ const pageStore = {
 };
 function Header() {
   const prefs = usePreferences();
+  useLayoutEffect(() => {
+    const header = document.querySelector('#approved-header header') as HTMLElement;
+    const update = () => document.getElementById('approved-header')!.style.setProperty('--pg-header-bottom', `${header.getBoundingClientRect().bottom}px`);
+    const observer = new ResizeObserver(update);
+    observer.observe(header);
+    window.addEventListener('resize', update);
+    update();
+    return () => { observer.disconnect(); window.removeEventListener('resize', update); };
+  }, []);
   const [route,setRoute] = useState(()=>routes[bridge.get().route] || 'dashboard');
   useEffect(()=>{const update=()=>setRoute(routes[bridge.get().route] || 'dashboard');document.addEventListener('playground:view-change',update);return ()=>document.removeEventListener('playground:view-change',update);},[]);
   useEffect(()=>{bridge.setTheme(prefs.resolvedTheme);},[prefs.resolvedTheme]);

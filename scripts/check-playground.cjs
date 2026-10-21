@@ -31,6 +31,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     if(process.env.SCREENSHOT_DIR) await page.screenshot({path:`${process.env.SCREENSHOT_DIR}/final-bento-${viewport.width}-${dark?'dark':'light'}.png`,fullPage:true});
    }
   }
+  await page.setViewportSize({width:1366,height:768});
+  await page.getByRole('button',{name:'Média',exact:true}).hover();
+  const menu = page.locator('[data-header-panel="group:media"]');
+  await menu.waitFor();
+  assert.equal(await menu.getByRole('button',{name:'Zavřít nabídku',exact:true}).count(),0,'Desktop hover dropdown has no close button');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Nastavení',exact:true}).click();
+  await page.getByRole('button',{name:'Vzhled a prostředí',exact:true}).click();
+  assert.equal(await page.locator('[data-header-panel="settings"]').getByRole('button',{name:'Zavřít nabídku',exact:true}).count(),1,'Detail panel retains close button');
+  await page.keyboard.press('Escape');
   await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth));
   assert.deepEqual(errors,[]);
