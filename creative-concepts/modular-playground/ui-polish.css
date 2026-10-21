@@ -133,9 +133,11 @@ body[data-concept="playground"] {
 
 /* Surface Polish V2: exact DS gradient underneath a dark Widget 3-inspired skin.
    Visual reference: https://uiverse.io/santhosh_2608/evil-robin-98
-   The intersected masks reveal only two soft corner lights. No new motion. */
+   A lighter skin reveals distinct color hotspots while retaining a dark center. */
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="5"],[data-widget="6"]) {
   --ink:var(--pg-light);
+  --pg-surface-light-a:100% 0%;
+  --pg-surface-light-b:0% 100%;
   background:var(--pg-surface-gradient);
   background-clip:padding-box;
 }
@@ -147,8 +149,14 @@ body[data-concept="playground"] {
   z-index:-1;
   pointer-events:none;
   background:linear-gradient(145deg,var(--pg-widget-3-ink),var(--pg-black));
-  mask-image:radial-gradient(ellipse 80% 110% at 100% 0%,#000b 0%,#000f 72%),radial-gradient(ellipse 80% 110% at 0% 100%,#000a 0%,#000f 72%);
+  opacity:.88;
+  mask-image:radial-gradient(ellipse 90% 110% at var(--pg-surface-light-a),#0004 0%,#0008 25%,#000f 85%),radial-gradient(ellipse 90% 110% at var(--pg-surface-light-b),#0003 0%,#0008 25%,#000f 85%);
   mask-composite:intersect;
-  -webkit-mask-image:radial-gradient(ellipse 80% 110% at 100% 0%,#000b 0%,#000f 72%),radial-gradient(ellipse 80% 110% at 0% 100%,#000a 0%,#000f 72%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 110% at var(--pg-surface-light-a),#0004 0%,#0008 25%,#000f 85%),radial-gradient(ellipse 90% 110% at var(--pg-surface-light-b),#0003 0%,#0008 25%,#000f 85%);
   -webkit-mask-composite:source-in;
+}
+/* Keep Ultraviolet consistent, with a different light direction on Widget 6. */
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="6"] {
+  --pg-surface-light-a:0% 0%;
+  --pg-surface-light-b:100% 100%;
 }
