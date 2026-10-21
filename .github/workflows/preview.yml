@@ -1,4 +1,4 @@
-name: Playground Evolution V1 preview
+name: Final Bento Dashboard preview
 on:
   push:
     branches: [preview/living-catalog-20261018]
@@ -30,8 +30,9 @@ jobs:
             for(const candidate of deployments.filter(d => d.sha !== context.sha)) {
               const {data: statuses} = await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
               // These known attempts failed with HTTP 500, then HTTP 400 for that stranded attempt.
-              // Both verified artifacts preserve every earlier preview outside creative-concepts/.
-              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
+              // The visual-refinement attempt was rejected by branch protection before publication.
+              // None of these failed attempts replaced the live preview.
+              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf','1d8663ea85fec2f7b56af864b779c95a24ec0440'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
               if(statuses[0]?.state !== 'success') throw new Error('Latest publication is not successful; preserve it for review');
               latest = candidate;
               break;
@@ -99,7 +100,7 @@ jobs:
           assert target.is_dir(), 'Existing Playground required'
           shutil.rmtree(target)
           shutil.copytree('creative-concepts/modular-playground',target)
-          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'V1','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
+          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'final-bento','visualRefinementCommit':'2d2dcc9131934ddb6ed6c115a7a95a2787c0ee3c','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('creative-concepts/modular-playground/') for name in current-set(old))
@@ -127,7 +128,7 @@ jobs:
             let previous;
             for(const candidate of data.filter(d=>d.sha!==context.sha)) {
               const {data:statuses}=await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
-              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
+              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf','1d8663ea85fec2f7b56af864b779c95a24ec0440'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
               previous=candidate;
               break;
             }

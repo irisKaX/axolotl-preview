@@ -1,16 +1,39 @@
-// One short preview check: original header, centred Office, themes and navigation.
-const assert=require('node:assert/strict');
-const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-(async()=>{const browser=await chromium.launch({headless:true,...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE?{executablePath:process.env.PLAYWRIGHT_CHROME_EXECUTABLE}:{})});try{
- const page=await browser.newPage({viewport:{width:1366,height:768},reducedMotion:'reduce'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto(process.env.PLAYGROUND_URL||'http://127.0.0.1:4190/creative-concepts/modular-playground/');
- await page.locator('#approved-header .axolotl-pill-nav').waitFor();
- const theme=page.getByRole('checkbox',{name:'Tmavý režim',exact:true});
- for(const dark of [true,false]){await theme.setChecked(dark);await page.waitForFunction(t=>document.documentElement.dataset.theme===t,dark?'dark':'light');const boxes=await page.evaluate(()=>Object.fromEntries(['office','find-card','qr-card','metadata-card'].map(c=>{const r=document.querySelector('.'+c).getBoundingClientRect();return[c,{x:r.x,y:r.y,w:r.width,h:r.height}]})));assert(boxes.office.x>boxes['find-card'].x&&boxes.office.x<boxes['qr-card'].x);assert(boxes.office.h>boxes['find-card'].h);assert(Math.abs(boxes.office.x+boxes.office.w/2-683)<2);}
- assert.notEqual(await page.locator('.axolotl-logo-art').evaluate(e=>getComputedStyle(e).maskImage),'none');
- await page.getByRole('button',{name:'Kontrola',exact:true}).hover();await page.locator('[data-header-panel="group:kontrola"]').waitFor();
- await page.locator('[data-header-panel="group:kontrola"]').getByRole('link',{name:'Hledání na webu',exact:true}).click();await page.locator('main[data-view=tools]').waitFor();assert.equal(await page.locator('main h1').innerText(),'Find Phrase');
- await page.locator('.workspace-nav a[href="#workspace"]').click();await page.locator('#note-body').waitFor();assert.equal(await theme.isChecked(),false);
- await page.setViewportSize({width:390,height:844});await page.getByRole('button',{name:'Otevřít navigaci',exact:true}).click();await page.locator('[data-header-panel="navigation"]').waitFor();await page.keyboard.press('Escape');assert(await page.getByRole('button',{name:'Otevřít navigaci',exact:true}).isVisible());
- assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);console.log('Playground: centred Office, original Header, dark/light and mobile navigation OK.');
-}finally{await browser.close();}})().catch(e=>{console.error(`::error title=Playground check::${String(e.stack||e).replaceAll('%','%25').replaceAll('\n','%0A')}`);process.exitCode=1;});
+// Short visual smoke for the single final bento composition.
+const assert = require('node:assert/strict');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+(async () => {
+ const browser = await chromium.launch({headless:true, ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE ? {executablePath:process.env.PLAYWRIGHT_CHROME_EXECUTABLE} : {})});
+ try {
+  const page = await browser.newPage({reducedMotion:'reduce'});
+  const errors = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto(process.env.PLAYGROUND_URL || 'http://127.0.0.1:4190/creative-concepts/modular-playground/');
+  await page.locator('#approved-header .axolotl-pill-nav').waitFor();
+  await page.evaluate(() => document.fonts.ready);
+  for (const viewport of [{width:1366,height:768},{width:1920,height:1080}]) {
+   await page.setViewportSize(viewport);
+   for (const dark of [true,false]) {
+    await page.getByRole('checkbox',{name:'Tmavý režim',exact:true}).setChecked(dark);
+    await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, dark ? 'dark' : 'light');
+    const layout = await page.evaluate(() => {
+     const box = el => {const r=el.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height,bottom:r.bottom};};
+     return {cards:[...document.querySelectorAll('.bento-cell')].map(box),header:box(document.querySelector('#approved-header header')),sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight};
+    });
+    assert.equal(layout.cards.length,7);
+    const [office,one,two,three,four,five,six] = layout.cards;
+    assert(office.x < one.x && one.x < two.x);
+    assert(Math.abs(one.y-two.y)<1 && Math.abs(three.y-four.y)<1);
+    assert(Math.abs(office.bottom-three.bottom)<1 && three.y>one.y);
+    assert(five.y>office.bottom && Math.abs(five.y-six.y)<1 && five.w>one.w);
+    assert(office.y>layout.header.bottom && office.y-layout.header.bottom<=25);
+    assert(layout.sw<=viewport.width && layout.sh<=viewport.height,`Overflow at ${viewport.width}: ${layout.sw}×${layout.sh}`);
+    assert.equal(await page.locator('main :is(button,input,a),.concept-bar,.workspace-nav,.site-footer').count(),0);
+    if(process.env.SCREENSHOT_DIR) await page.screenshot({path:`${process.env.SCREENSHOT_DIR}/final-bento-${viewport.width}-${dark?'dark':'light'}.png`,fullPage:true});
+   }
+  }
+  await page.setViewportSize({width:390,height:844});
+  assert(await page.evaluate(() => document.documentElement.scrollWidth<=innerWidth));
+  assert.deepEqual(errors,[]);
+  console.log('Final bento: both desktop sizes fit, dark/light OK, no horizontal mobile overflow.');
+ } finally {await browser.close();}
+})().catch(e => {console.error(`::error title=Playground check::${String(e.stack||e).replaceAll('%','%25').replaceAll('\n','%0A')}`);process.exitCode=1;});
