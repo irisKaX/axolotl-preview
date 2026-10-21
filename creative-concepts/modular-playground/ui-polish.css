@@ -75,10 +75,10 @@ body[data-concept="playground"] {
   transition:transform 280ms cubic-bezier(.22,1,.36,1),box-shadow 280ms ease;
 }
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="1"],[data-widget="4"]) { background:var(--pg-widget-4); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="2"] { background:var(--pg-ultraviolet); --ink:var(--pg-white); }
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="2"] { --pg-surface-gradient:var(--pg-arctic-blue); }
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="3"] { background:var(--pg-widget-3); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="5"] { background:var(--pg-arctic-blue); --ink:var(--pg-widget-3-ink); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="6"] { background:var(--pg-light); --ink:var(--pg-widget-3-ink); }
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="5"] { --pg-surface-gradient:var(--pg-ultraviolet); }
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="6"] { --pg-surface-gradient:var(--pg-ultraviolet); }
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget]::after {
   content:"";
   position:absolute;
@@ -130,3 +130,25 @@ body[data-concept="playground"] {
 }
 /* Remove inline-baseline descent so both halves share the same optical center. */
 #approved-header header > div:has(> .axolotl-pill-nav) { display:flex; align-items:center; }
+
+/* Surface Polish V2: exact DS gradient underneath a dark Widget 3-inspired skin.
+   Visual reference: https://uiverse.io/santhosh_2608/evil-robin-98
+   The intersected masks reveal only two soft corner lights. No new motion. */
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="5"],[data-widget="6"]) {
+  --ink:var(--pg-light);
+  background:var(--pg-surface-gradient);
+  background-clip:padding-box;
+}
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="5"],[data-widget="6"])::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  z-index:-1;
+  pointer-events:none;
+  background:linear-gradient(145deg,var(--pg-widget-3-ink),var(--pg-black));
+  mask-image:radial-gradient(ellipse 80% 110% at 100% 0%,#000b 0%,#000f 72%),radial-gradient(ellipse 80% 110% at 0% 100%,#000a 0%,#000f 72%);
+  mask-composite:intersect;
+  -webkit-mask-image:radial-gradient(ellipse 80% 110% at 100% 0%,#000b 0%,#000f 72%),radial-gradient(ellipse 80% 110% at 0% 100%,#000a 0%,#000f 72%);
+  -webkit-mask-composite:source-in;
+}
