@@ -1,7 +1,7 @@
-name: Playground Evolution V1 preview
+name: Playground Visual Refinement preview
 on:
   push:
-    branches: [preview/living-catalog-20261018]
+    branches: [preview/playground-visual-refinement-20261021]
 permissions:
   contents: read
   actions: read
@@ -99,7 +99,7 @@ jobs:
           assert target.is_dir(), 'Existing Playground required'
           shutil.rmtree(target)
           shutil.copytree('creative-concepts/modular-playground',target)
-          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'V1','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
+          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'Visual Refinement V1','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
           assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
           current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
           assert all(name.startswith('creative-concepts/modular-playground/') for name in current-set(old))
