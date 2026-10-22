@@ -1,24 +1,24 @@
 import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 import {resolve} from 'node:path';
-import {existsSync,readFileSync,writeFileSync} from 'node:fs';
+import {pathToFileURL} from 'node:url';
+import {existsSync,readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
 const source=resolve(process.argv[2]||'/tmp/axolotl-header-preview-source');
 const require=createRequire(resolve(source,'package.json'));
 const {chromium}=require('playwright');
 const base=process.env.LIBRARY_URL||'http://127.0.0.1:4186/axolotl-preview/ds-library-v1-1/';
-const record=process.argv.includes('--record');
+assert.equal(process.argv.length,3,'Usage: check-header-polish.mjs SOURCE; --record is forbidden');
+const {BASELINE_DIR,BASELINE_SHA256,VISUAL_HARNESS_DIR,BASELINE_OUTPUT}=process.env;
+assert(BASELINE_DIR&&BASELINE_SHA256&&VISUAL_HARNESS_DIR&&BASELINE_OUTPUT,'Pinned BASELINE_DIR, BASELINE_SHA256, VISUAL_HARNESS_DIR and new BASELINE_OUTPUT are mandatory');
+// Validate integrity before any browser work. The strict runner also checks the actual toolchain.
+const {loadReference}=await import(pathToFileURL(resolve(VISUAL_HARNESS_DIR,'contract.mjs')));
+const declaredToolchain=JSON.parse(readFileSync(resolve(BASELINE_DIR,'manifest.json'),'utf8')).toolchain;
+loadReference(BASELINE_DIR,BASELINE_SHA256,declaredToolchain);
 let proxy;if(base.startsWith('https:')&&process.env.HTTPS_PROXY){const u=new URL(process.env.HTTPS_PROXY);proxy={server:u.origin,username:decodeURIComponent(u.username),password:decodeURIComponent(u.password)};}
 const browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,proxy});
 const page=await browser.newPage({viewport:{width:1366,height:768},ignoreHTTPSErrors:!!proxy,reducedMotion:'reduce'});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-const snapshots={};
-const geometry=()=>page.locator('.ds-dashboard').evaluate(root=>{
- const base=root.getBoundingClientRect();
- return [...root.querySelectorAll('header, .axolotl-pill-nav__logo, .axolotl-pill-nav__item, [data-header-url], [data-header-url] input, [data-header-url] button, [data-header-seo], input[aria-label="Tmavý režim"], .ds-bento-cell')].map(el=>{
-  const r=el.getBoundingClientRect(),s=getComputedStyle(el);
-  return [el.tagName,el.hasAttribute('data-header-seo')?'SEO':el.getAttribute('aria-label')||'',...[r.x-base.x,r.y-base.y,r.width,r.height].map(v=>Math.round(v*100)/100),s.borderRadius,s.fontFamily,s.fontSize,s.padding];
- });
-});
 const readPaint=()=>page.locator('#approved-header header').evaluate(el=>{
  const s=getComputedStyle(el);const p=document.createElement('span');el.append(p);
  const resolveColor=value=>{p.style.color=value;return getComputedStyle(p).color;};
@@ -30,8 +30,7 @@ try {
  for(const mode of ['light','dark']) {
   await page.getByRole('checkbox',{name:'Tmavý režim',exact:true}).setChecked(mode==='dark');await page.waitForFunction(m=>document.documentElement.dataset.theme===m,mode);
   await page.locator('.ds-dashboard').evaluate(e=>e.scrollIntoView());
-  snapshots[mode]=await geometry();paints[mode]=await readPaint();
-  if(record)continue;
+  paints[mode]=await readPaint();
   const logo=page.locator('#approved-header .axo-animated-mark');assert.equal(await logo.count(),1,'Header reuses AnimatedAxolotlLogo');
   assert.equal(await logo.locator('[data-gill]').count(),6);assert.equal(await logo.getAttribute('data-size'),'small');
   assert(await logo.locator('svg').evaluate(e=>{const s=getComputedStyle(e);return s.width==='50px'&&s.height==='42px'&&s.fill==='rgb(255, 255, 255)';}),'Header icon rules must not shrink/recolor the canonical SVG');
@@ -62,17 +61,10 @@ try {
   await page.mouse.down();assert.equal(await copy.evaluate(e=>getComputedStyle(e).backgroundColor),paints.light.primary);await page.mouse.up();
   await page.mouse.move(1,1);await page.locator('.ds-dashboard').screenshot({path:`/tmp/header-polish-${mode}.png`});
  }
- if(record){writeFileSync('/tmp/header-polish-baseline.json',JSON.stringify({snapshots,paints},null,2));console.log('Recorded unchanged Header / Dashboard geometry and Light reference',paints.light);}
- else {
   assert.deepEqual(paints.dark,paints.light,'All Header interaction paints match Light, including hover pair');
   const reference=readFileSync(resolve(source,'src/design-system/tokens/tweakcn.export.css'),'utf8').match(/--primary:\s*([^;]+)/)[1];
   const resolvedReference=await page.evaluate(value=>{const el=document.createElement('span');el.style.color=value;document.body.append(el);const color=getComputedStyle(el).color;el.remove();return color;},reference);
   assert.equal(paints.light.primary,resolvedReference);
-  if(existsSync('/tmp/header-polish-baseline.json')){
-   const baseline=JSON.parse(readFileSync('/tmp/header-polish-baseline.json','utf8'));
-   assert.deepEqual(snapshots,baseline.snapshots,'Approved geometry, radii, typography and spacing remain unchanged');
-   assert.deepEqual(paints.light,baseline.paints.light,'Light reference remains unchanged');
-  }
   await page.emulateMedia({reducedMotion:'no-preference'});
   const link=page.getByRole('link',{name:'O₂ Axolotl – dashboard',exact:true});await link.hover();await page.waitForTimeout(300);
   assert(await link.evaluate(e=>e.getAnimations({subtree:true}).every(a=>a.effect.target.classList.contains('axo-animated-mark__orbit'))),'PillNav must not add a second whole-logo animation');
@@ -85,6 +77,7 @@ try {
    await link.click();
   }
   await page.screenshot({path:'/tmp/header-polish-mobile.png'});
-  assert.deepEqual(errors,[]);console.log('PASS: Light reference colors in both Header themes, canonical SVG/animation reuse, approved geometry, interactions, navigation and responsive logo.');
- }
+  assert.deepEqual(errors,[]);console.log('PASS: Light reference colors in both Header themes, canonical SVG/animation reuse, interactions, navigation and responsive logo.');
 } finally {await browser.close();}
+// No diagnostic flag in the publication path: a candidate reference fails closed.
+execFileSync(process.execPath,[resolve(VISUAL_HARNESS_DIR,'check.mjs'),'--baseline',BASELINE_DIR,'--sha256',BASELINE_SHA256,'--url',base,'--output',BASELINE_OUTPUT],{stdio:'inherit'});
