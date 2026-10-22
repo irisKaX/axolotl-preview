@@ -9,7 +9,7 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: 3b3a69e70a0992d80597cfc7a55c9cde807599b1
+  SOURCE_COMMIT: cbfee9819e9983caccef83237c1eafaffeef807a
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,7 +34,7 @@ jobs:
         working-directory: source
       - run: node scripts/ds-library/build.mjs
         working-directory: source
-      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx
+      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx src/design-system/Button/Button.test.tsx src/design-system/Button/SplitButton.test.tsx
         working-directory: source
       - run: npx playwright install --with-deps chromium
         working-directory: source
