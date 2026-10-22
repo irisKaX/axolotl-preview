@@ -1,28 +1,98 @@
-name: Consolidated Library review (no deployment)
+name: Canonical Design System Library V1.1
 on:
+  push:
+    branches: [design-system/consolidate-v1-1]
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: axolotl-preview-pages
+  cancel-in-progress: false
+env:
+  SOURCE_COMMIT: 2170d103e9d7a94331c690d0d7ce63d8c23884ad
 jobs:
-  review:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           path: preview
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: irisKaX/axolotl-2
-          ref: design-system/consolidate-v1-1
+          ref: ${{ env.SOURCE_COMMIT }}
           path: source
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm ci && node scripts/ds-library/build.mjs
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+      - run: npm ci
         working-directory: source
-      - run: node scripts/assemble-library.mjs ../source/dist ../review-output
+      - run: node scripts/ds-library/build.mjs
+        working-directory: source
+      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx
+        working-directory: source
+      - run: npx playwright install --with-deps chromium
+        working-directory: source
+      - name: Check the native React catalog
+        working-directory: source
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4185 --base /axolotl-preview/ds-library-v1-1/ --strictPort >/tmp/library-preview.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for attempt in $(seq 1 20); do
+            curl --fail --silent http://127.0.0.1:4185/axolotl-preview/ds-library-v1-1/ >/dev/null && break
+            sleep 1
+          done
+          node scripts/ds-library/check-consolidation.mjs
+      - run: node scripts/assemble-library.mjs ../source/dist ../preview-output
         working-directory: preview
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-pages-artifact@v3
         with:
-          name: consolidated-library-review
-          path: review-output
+          path: preview-output
+          retention-days: 7
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Confirm the experimental Pages target
+        uses: actions/github-script@v7
+        with:
+          script: |
+            if (context.repo.repo !== 'axolotl-preview') throw new Error('Preview repository only');
+            const {data} = await github.rest.repos.getPages(context.repo);
+            if (data.build_type !== 'workflow' || data.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages target');
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deployment
+      - name: Verify the published source and retired Playground
+        env:
+          LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/
+        run: |
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          url=os.environ['LIBRARY_URL']+'provenance.json'
+          for attempt in range(12):
+              try:
+                  data=json.load(urllib.request.urlopen(url,timeout=30))
+                  assert data['previewCommit']==os.environ['SOURCE_COMMIT']
+                  assert data['architecture']=='react-canonical-v2'
+                  body=urllib.request.urlopen('https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/',timeout=30).read().decode()
+                  assert '?section=dashboard#design-system' in body
+                  print('Published canonical React Library and Dashboard redirect verified.')
+                  break
+              except Exception:
+                  if attempt==11: raise
+                  time.sleep(10)
+          PY
