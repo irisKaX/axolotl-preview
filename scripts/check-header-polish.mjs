@@ -16,7 +16,7 @@ const {loadReference}=await import(pathToFileURL(resolve(VISUAL_HARNESS_DIR,'con
 const declaredToolchain=JSON.parse(readFileSync(resolve(BASELINE_DIR,'manifest.json'),'utf8')).toolchain;
 loadReference(BASELINE_DIR,BASELINE_SHA256,declaredToolchain);
 let proxy;if(base.startsWith('https:')&&process.env.HTTPS_PROXY){const u=new URL(process.env.HTTPS_PROXY);proxy={server:u.origin,username:decodeURIComponent(u.username),password:decodeURIComponent(u.password)};}
-const browser=await chromium.launch({executablePath:existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined,proxy});
+const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROME_EXECUTABLE||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),proxy});
 const page=await browser.newPage({viewport:{width:1366,height:768},ignoreHTTPSErrors:!!proxy,reducedMotion:'reduce'});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
 const readPaint=()=>page.locator('#approved-header header').evaluate(el=>{

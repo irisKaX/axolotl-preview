@@ -11,9 +11,9 @@ concurrency:
 env:
   SOURCE_COMMIT: 63bda318f5556b12b629016e821e08feb7374281
   # Separate immutable test/reference checkouts; neither is the source build.
-  TEST_COMMIT: 513c9f7b5e4225540530b73358c1362f549e4a79
-  BASELINE_COMMIT: 40693e2b53513701e744b8313e182001c1871af6
-  BASELINE_SHA256: ff42865ee9f21a733aef22fa7b21da15279022bcdd728609d9201eda69c10e8b
+  TEST_COMMIT: 0f63c18832485b2f5a706c2c88e829e7606be29f
+  BASELINE_COMMIT: 54d86d19206aefe7f18202b77cdb1f679f5da66c
+  BASELINE_SHA256: f311428b31cfd140f6d5c3c417d857e4e154531b37f0aef45af9d5391fec1096
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -41,78 +41,24 @@ jobs:
           ref: ${{ env.BASELINE_COMMIT }}
           path: reference
           persist-credentials: false
-      - run: node scripts/header-polish.mjs apply ../source
-        working-directory: preview
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24.19.0'
-          cache: npm
-          cache-dependency-path: source/package-lock.json
-      - id: dependencies
-        run: npm ci
-        working-directory: source
-      - id: library-build
-        run: node scripts/ds-library/build.mjs
-        working-directory: source
-      - run: node scripts/header-polish.mjs stamp ../source
-        working-directory: preview
-      - name: Prepare pinned test overlay (tests only)
-        id: test-setup
-        working-directory: source
-        run: |
-          cp ../harness/src/design-system/library/Unification.test.tsx src/design-system/library/Unification.test.tsx
-          ln -s "$PWD/node_modules" ../harness/node_modules
-      - name: Required TypeScript check
-        if: ${{ !cancelled() && steps.test-setup.outcome == 'success' }}
-        working-directory: source
-        run: npm run typecheck
-      - name: Complete unit suite (no narrow allowlist)
-        if: ${{ !cancelled() && steps.test-setup.outcome == 'success' }}
-        working-directory: source
-        run: npm test
-      - name: Reference and bridge contracts
-        if: ${{ !cancelled() && steps.test-setup.outcome == 'success' }}
-        working-directory: source
-        run: node --test ../harness/scripts/visual-baseline/contract.test.mjs tests/header-preview-bridge.test.mjs tests/bridge-original-indexation.test.mjs
-      - name: Browser dependencies
-        id: browser-dependencies
-        if: ${{ !cancelled() && steps.test-setup.outcome == 'success' }}
-        working-directory: source
-        run: npx playwright install --with-deps chromium
-      - name: Check native React catalog and mandatory independent baseline
-        if: ${{ !cancelled() && steps.library-build.outcome == 'success' && steps.browser-dependencies.outcome == 'success' }}
-        working-directory: source
+      - name: Build locked local/CI rendering environment
+        run: docker build --file harness/scripts/visual-baseline/Dockerfile --tag axolotl-milestone-a:test harness/scripts/visual-baseline
+      - name: Build, full tests and mandatory independent baseline gate
         env:
-          LIBRARY_URL: http://127.0.0.1:4185/axolotl-preview/ds-library-v1-1/
           BASELINE_DIR: ${{ github.workspace }}/reference/tests/visual/approved-v1-1
           VISUAL_HARNESS_DIR: ${{ github.workspace }}/harness/scripts/visual-baseline
-          BASELINE_OUTPUT: ${{ runner.temp }}/baseline-comparison
-          LENS_DIST: ${{ runner.temp }}/lens-site/verification/lens
-          LENS_URL: http://127.0.0.1:4197/verification/lens/scripts/button-lens-02/fixture.html
+          SOURCE_DIR: ${{ github.workspace }}/source
+          PREVIEW_DIR: ${{ github.workspace }}/preview
         run: |
-          node --input-type=module -e "import {build} from 'vite'; await build({base:'/verification/lens/',build:{outDir:process.env.LENS_DIST,rollupOptions:{input:'scripts/button-lens-02/fixture.html'}}});"
-          npm run preview -- --host 127.0.0.1 --port 4185 --base /axolotl-preview/ds-library-v1-1/ --strictPort >"$RUNNER_TEMP/library-preview.log" 2>&1 &
-          SERVER_PID=$!
-          python3 -m http.server 4197 --bind 127.0.0.1 --directory "$RUNNER_TEMP/lens-site" >"$RUNNER_TEMP/lens-preview.log" 2>&1 &
-          LENS_PID=$!
-          trap 'kill "$SERVER_PID" "$LENS_PID"' EXIT
-          for attempt in $(seq 1 20); do
-            curl --fail --silent "$LIBRARY_URL" >/dev/null && curl --fail --silent "$LENS_URL" >/dev/null && break
-            sleep 1
-          done
-          curl --fail --silent "$LIBRARY_URL" >/dev/null
-          curl --fail --silent "$LENS_URL" >/dev/null
-          # All checks run, but every nonzero exit remains a job failure.
-          status=0
-          node scripts/ds-library/check-theme.mjs || status=1
-          node scripts/ds-library/check-header.mjs || status=1
-          node scripts/ds-library/check-contrast.mjs || status=1
-          node "$VISUAL_HARNESS_DIR/motion.mjs" "$LIBRARY_URL" || status=1
-          node "$VISUAL_HARNESS_DIR/button-states.mjs" "$LIBRARY_URL" || status=1
-          node "$VISUAL_HARNESS_DIR/negative.mjs" --baseline "$BASELINE_DIR" --sha256 "$BASELINE_SHA256" --url "$LIBRARY_URL" --report "$RUNNER_TEMP/baseline-negative.json" || status=1
-          # No --diagnostic or record/update path: candidate and toolchain mismatch BLOCK.
-          node ../preview/scripts/check-header-polish.mjs . || status=1
-          exit "$status"
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE" \
+            --mount "type=bind,src=$RUNNER_TEMP,dst=$RUNNER_TEMP" \
+            --mount "type=bind,src=$BASELINE_DIR,dst=$BASELINE_DIR,readonly" \
+            --workdir "$SOURCE_DIR" \
+            -e SOURCE_DIR -e PREVIEW_DIR -e VISUAL_HARNESS_DIR \
+            -e BASELINE_DIR -e BASELINE_SHA256 -e RUNNER_TEMP \
+            -e NPM_CONFIG_CACHE="$RUNNER_TEMP/npm-cache" \
+            axolotl-milestone-a:test bash "$VISUAL_HARNESS_DIR/ci.sh"
       - name: Preserve test evidence (never part of the Pages artifact)
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -125,8 +71,12 @@ jobs:
             ${{ runner.temp }}/lens-preview.log
           if-no-files-found: warn
           retention-days: 14
-      - run: node scripts/assemble-library.mjs ../source/dist ../preview-output
-        working-directory: preview
+      - name: Assemble preview artifact in the same locked Node environment
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE" \
+            --workdir "$GITHUB_WORKSPACE/preview" \
+            axolotl-milestone-a:test node scripts/assemble-library.mjs ../source/dist ../preview-output
       - uses: actions/upload-pages-artifact@v3
         with:
           path: preview-output
