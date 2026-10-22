@@ -74,11 +74,8 @@ body[data-concept="playground"] {
   border-color:var(--pg-edge);
   transition:transform 280ms cubic-bezier(.22,1,.36,1),box-shadow 280ms ease;
 }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="1"],[data-widget="4"]) { background:var(--pg-widget-4); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="2"] { --pg-surface-gradient:var(--pg-arctic-blue); }
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="1"],[data-widget="4"],[data-widget="5"]) { background:var(--pg-widget-4); }
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="3"] { background:var(--pg-widget-3); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="5"] { --pg-surface-gradient:var(--pg-ultraviolet); }
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="6"] { --pg-surface-gradient:var(--pg-ultraviolet); }
 :root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget]::after {
   content:"";
   position:absolute;
@@ -100,26 +97,27 @@ body[data-concept="playground"] {
 }
 /* GooseUI Border Beam (MIT), adapted from https://gooseui.pro/r/border-beam.json
    linked by https://21st.dev/@gooseui/components/border-beam.
-   Preserve its animated angle + excluded content-box mask; slow, 1px light rim. */
+   Preserve its animated angle + excluded content-box mask; a brighter 2px light rim with a calm 12-second cycle. */
 @property --pg-beam-angle { syntax:"<angle>"; initial-value:0deg; inherits:false; }
 @keyframes pg-border-beam { from { --pg-beam-angle:0deg; } to { --pg-beam-angle:360deg; } }
 .pg-border-beam {
   position:absolute;
   inset:0;
   border-radius:inherit;
-  padding:1px;
+  padding:2px;
   pointer-events:none;
   z-index:2;
-  opacity:.55;
-  background:linear-gradient(var(--pg-beam-angle),transparent 0%,transparent 35%,var(--pg-o2-blue) 50%,var(--pg-purple) 65%,transparent 80%,transparent 100%);
+  opacity:.9;
+  background:linear-gradient(var(--pg-beam-angle),transparent 0%,transparent 35%,var(--pg-o2-blue) 46%,var(--pg-light) 54%,var(--pg-purple) 65%,transparent 80%,transparent 100%);
   mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
   mask-composite:exclude;
   -webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
-  animation:pg-border-beam 20s linear infinite;
+  animation:pg-border-beam 12s linear infinite;
 }
-[data-widget="3"] > .pg-border-beam { animation-delay:-7s; }
-[data-widget="4"] > .pg-border-beam { animation-delay:-14s; }
+[data-widget="3"] > .pg-border-beam { animation-delay:-3s; }
+[data-widget="4"] > .pg-border-beam { animation-delay:-6s; }
+[data-widget="5"] > .pg-border-beam { animation-delay:-9s; }
 :root[data-motion="reduced"] .pg-border-beam { animation:none!important; opacity:.25; }
 :root[data-motion="reduced"] #approved-header button > svg,
 :root[data-motion="reduced"] main[data-view="dashboard"] .final-bento > [data-widget]:hover { transform:none!important; }
@@ -131,34 +129,11 @@ body[data-concept="playground"] {
 /* Remove inline-baseline descent so both halves share the same optical center. */
 #approved-header header > div:has(> .axolotl-pill-nav) { display:flex; align-items:center; }
 
-/* Surface Polish V2: exact DS gradient underneath a dark Widget 3-inspired skin.
-   Visual reference: https://uiverse.io/santhosh_2608/evil-robin-98
-   A lighter skin reveals distinct color hotspots while retaining a dark center. */
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="5"],[data-widget="6"]) {
+/* Use the catalog Ultraviolet directly on both colored dashboard cards. */
+:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="6"]) {
   --ink:var(--pg-light);
-  --pg-surface-light-a:100% 0%;
-  --pg-surface-light-b:0% 100%;
-  background:var(--pg-surface-gradient);
+  background:var(--pg-ultraviolet);
   background-clip:padding-box;
-}
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > :is([data-widget="2"],[data-widget="5"],[data-widget="6"])::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:inherit;
-  z-index:-1;
-  pointer-events:none;
-  background:linear-gradient(145deg,var(--pg-widget-3-ink),var(--pg-black));
-  opacity:.88;
-  mask-image:radial-gradient(ellipse 90% 110% at var(--pg-surface-light-a),#0004 0%,#0008 25%,#000f 85%),radial-gradient(ellipse 90% 110% at var(--pg-surface-light-b),#0003 0%,#0008 25%,#000f 85%);
-  mask-composite:intersect;
-  -webkit-mask-image:radial-gradient(ellipse 90% 110% at var(--pg-surface-light-a),#0004 0%,#0008 25%,#000f 85%),radial-gradient(ellipse 90% 110% at var(--pg-surface-light-b),#0003 0%,#0008 25%,#000f 85%);
-  -webkit-mask-composite:source-in;
-}
-/* Keep Ultraviolet consistent, with a different light direction on Widget 6. */
-:root body[data-concept="playground"] main[data-view="dashboard"] .final-bento > [data-widget="6"] {
-  --pg-surface-light-a:0% 0%;
-  --pg-surface-light-b:100% 100%;
 }
 
 /* Dashboard-only scale balance; preserve the approved header on other views. */
