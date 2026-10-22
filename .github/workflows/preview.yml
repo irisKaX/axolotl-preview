@@ -9,7 +9,7 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: 1e7291dbc67d23a941d54b563761c00e871df593
+  SOURCE_COMMIT: 3b3a69e70a0992d80597cfc7a55c9cde807599b1
 jobs:
   build:
     runs-on: ubuntu-latest
