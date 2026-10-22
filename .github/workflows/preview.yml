@@ -11,9 +11,9 @@ concurrency:
 env:
   SOURCE_COMMIT: 63bda318f5556b12b629016e821e08feb7374281
   # Separate immutable test/reference checkouts; neither is the source build.
-  TEST_COMMIT: 0f63c18832485b2f5a706c2c88e829e7606be29f
-  BASELINE_COMMIT: 54d86d19206aefe7f18202b77cdb1f679f5da66c
-  BASELINE_SHA256: f311428b31cfd140f6d5c3c417d857e4e154531b37f0aef45af9d5391fec1096
+  TEST_COMMIT: b4ceef74af60ac12b6b4420917f1ece9c2658b64
+  BASELINE_COMMIT: a6db36ec75ddd8d57dac4fa8a62f4f16ea339a1c
+  BASELINE_SHA256: d0f695525f0c0d2c4df542638bf3c55394b66bda4ba5c809c6b9ce660f9c0d26
 jobs:
   build:
     runs-on: ubuntu-latest
