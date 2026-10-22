@@ -1,7 +1,7 @@
 name: Canonical Design System Library V1.1
 on:
   push:
-    branches: [design-system/consolidate-v1-1]
+    branches: [design-system/header-final-polish]
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,6 +25,8 @@ jobs:
           ref: ${{ env.SOURCE_COMMIT }}
           path: source
           persist-credentials: false
+      - run: node scripts/header-polish.mjs apply ../source
+        working-directory: preview
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -34,7 +36,9 @@ jobs:
         working-directory: source
       - run: node scripts/ds-library/build.mjs
         working-directory: source
-      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx src/design-system/Button/Button.test.tsx src/design-system/Button/SplitButton.test.tsx src/design-system/brand/AnimatedAxolotlLogo.test.tsx src/app/header src/lib/browser-bridge.test.ts
+      - run: node scripts/header-polish.mjs stamp ../source
+        working-directory: preview
+      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx src/design-system/Button/Button.test.tsx src/design-system/Button/SplitButton.test.tsx src/design-system/brand/AnimatedAxolotlLogo.test.tsx src/app/header src/lib/browser-bridge.test.ts src/components/navigation/PillNav.test.tsx
         working-directory: source
       - run: node --test tests/header-preview-bridge.test.mjs tests/bridge-original-indexation.test.mjs
         working-directory: source
@@ -52,6 +56,7 @@ jobs:
           done
           node scripts/ds-library/check-theme.mjs
           node scripts/ds-library/check-header.mjs
+          LIBRARY_URL=http://127.0.0.1:4185/axolotl-preview/ds-library-v1-1/ node ../preview/scripts/check-header-polish.mjs .
           node scripts/ds-library/check-contrast.mjs
       - run: node scripts/assemble-library.mjs ../source/dist ../preview-output
         working-directory: preview
@@ -83,6 +88,7 @@ jobs:
       - name: Verify the published source and retired Playground
         env:
           LIBRARY_URL: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/
+          PREVIEW_COMMIT: ${{ github.sha }}
         run: |
           python3 - <<'PY'
           import json, os, time, urllib.request
@@ -91,6 +97,8 @@ jobs:
               try:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
                   assert data['previewCommit']==os.environ['SOURCE_COMMIT']
+                  assert data['previewRepositoryCommit']==os.environ['PREVIEW_COMMIT']
+                  assert data['previewPatch']['file']=='patches/header-final-polish.patch'
                   assert data['architecture']=='react-canonical-v2'
                   assert data['theme']=='tweakcn-v1'
                   assert data['themeRevision']=='contrast-v1'
