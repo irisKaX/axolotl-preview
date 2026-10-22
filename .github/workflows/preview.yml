@@ -9,7 +9,7 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: b65cd9c65b56fec3f2943d1f7efd7bed96a1705d
+  SOURCE_COMMIT: f5bda1713cad3d8e46aa34c405475c7f2cd92c55
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,7 +34,9 @@ jobs:
         working-directory: source
       - run: node scripts/ds-library/build.mjs
         working-directory: source
-      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx src/design-system/Button/Button.test.tsx src/design-system/Button/SplitButton.test.tsx src/design-system/brand/AnimatedAxolotlLogo.test.tsx
+      - run: npx vitest run src/pages/design-system/library/Registry.test.tsx src/design-system/Button/Button.test.tsx src/design-system/Button/SplitButton.test.tsx src/design-system/brand/AnimatedAxolotlLogo.test.tsx src/app/header src/lib/browser-bridge.test.ts
+        working-directory: source
+      - run: node --test tests/header-preview-bridge.test.mjs tests/bridge-original-indexation.test.mjs
         working-directory: source
       - run: npx playwright install --with-deps chromium
         working-directory: source
@@ -49,6 +51,7 @@ jobs:
             sleep 1
           done
           node scripts/ds-library/check-theme.mjs
+          node scripts/ds-library/check-header.mjs
           node scripts/ds-library/check-contrast.mjs
       - run: node scripts/assemble-library.mjs ../source/dist ../preview-output
         working-directory: preview
