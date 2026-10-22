@@ -9,7 +9,7 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: 2170d103e9d7a94331c690d0d7ce63d8c23884ad
+  SOURCE_COMMIT: c586ee04a2dc15ed9bd01076a7ed7602a42dc461
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,7 +48,7 @@ jobs:
             curl --fail --silent http://127.0.0.1:4185/axolotl-preview/ds-library-v1-1/ >/dev/null && break
             sleep 1
           done
-          node scripts/ds-library/check-consolidation.mjs
+          node scripts/ds-library/check-theme.mjs
       - run: node scripts/assemble-library.mjs ../source/dist ../preview-output
         working-directory: preview
       - uses: actions/upload-pages-artifact@v3
@@ -88,6 +88,7 @@ jobs:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
                   assert data['previewCommit']==os.environ['SOURCE_COMMIT']
                   assert data['architecture']=='react-canonical-v2'
+                  assert data['theme']=='tweakcn-v1'
                   body=urllib.request.urlopen('https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/',timeout=30).read().decode()
                   assert '?section=dashboard#design-system' in body
                   print('Published canonical React Library and Dashboard redirect verified.')

@@ -10,3 +10,5 @@ Zdroje katalogu jsou v `irisKaX/axolotl-2`, větev `design-system/consolidate-v1
 `retired-routes.json` eviduje historické veřejné adresy. Git historie uchovává původní podklady. Zadání V2 povoluje experimentální publikaci. Workflow z konsolidační větve sestaví připnutý zdrojový commit, ověří registr a základní ovládání/přístupnost a publikuje jedinou Library spolu s přesměrováními. Používá stávající prostředí `github-pages` a respektuje jeho ochranu větví. Žádný merge ani produkční deployment není součástí změny. Modular Playground se po ověřené vizuální shodě přesměruje přímo na Dashboard.
 
 Starý katalog na `axolotl-2/#design-system` je vyřazený jako vizuální autorita. Jeho produkční routa zůstává beze změny. Soukromá Inspiration Library se nezveřejňuje ani nemění.
+
+Aktuální vizuální základ: přesný TweakCN CSS export uživatelky (`tweakcn-v1`), jednotný pro celou Library v light i dark. Brandové palety a Mascot V3 zůstávají oddělené. Montserrat/Fira Code jsou lokální OFL fonty; Georgia podle rozhodnutí uživatelky systémová. Přesné exportované barevné páry mají zdokumentovaná kontrastní omezení.

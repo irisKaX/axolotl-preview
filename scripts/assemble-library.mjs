@@ -4,7 +4,7 @@ import path from 'node:path';
 const library = path.resolve(process.argv[2] || '../axolotl-2/dist');
 const output = path.resolve(process.argv[3] || '/tmp/axolotl-consolidated-preview');
 const provenance=JSON.parse(readFileSync(path.join(library,'provenance.json'),'utf8'));
-if (!provenance.consolidation || !provenance.categories.includes('dashboard') || !provenance.categories.includes('brand') || !provenance.categories.includes('foundations') || provenance.architecture !== 'react-canonical-v2') throw Error('Build the consolidated Library first');
+if (!provenance.consolidation || !provenance.categories.includes('dashboard') || !provenance.categories.includes('brand') || !provenance.categories.includes('foundations') || provenance.architecture !== 'react-canonical-v2' || provenance.theme !== 'tweakcn-v1') throw Error('Build the consolidated Library first');
 if (existsSync(output)) throw Error('Output must be a new directory; preserve existing review files');
 mkdirSync(output,{recursive:true});
 cpSync(library,path.join(output,'ds-library-v1-1'),{recursive:true});
