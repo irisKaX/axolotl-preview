@@ -1,180 +1,28 @@
-name: Final Bento Dashboard preview
+name: Consolidated Library review (no deployment)
 on:
-  push:
-    branches: [preview/living-catalog-20261018]
+  workflow_dispatch:
 permissions:
   contents: read
-  actions: read
-  pages: write
-  id-token: write
-concurrency:
-  group: axolotl-preview-pages
-  cancel-in-progress: false
 jobs:
-  build:
+  review:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      baseline_sha: ${{ steps.baseline.outputs.sha }}
-    steps:
-      - name: Locate the current successful preview artifact
-        id: baseline
-        uses: actions/github-script@v7
-        with:
-          script: |
-            if(context.repo.repo !== 'axolotl-preview') throw new Error('Preview repository only');
-            const {data: pages} = await github.rest.repos.getPages(context.repo);
-            if(pages.build_type !== 'workflow' || pages.html_url !== 'https://iriskax.github.io/axolotl-preview/') throw new Error('Unexpected Pages configuration');
-            const {data: deployments} = await github.rest.repos.listDeployments({...context.repo,environment:'github-pages',per_page:100});
-            let latest;
-            for(const candidate of deployments.filter(d => d.sha !== context.sha)) {
-              const {data: statuses} = await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
-              // These known attempts failed with HTTP 500, then HTTP 400 for that stranded attempt.
-              // The visual-refinement attempt was rejected by branch protection before publication.
-              // None of these failed attempts replaced the live preview.
-              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf','1d8663ea85fec2f7b56af864b779c95a24ec0440'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
-              if(statuses[0]?.state !== 'success') throw new Error('Latest publication is not successful; preserve it for review');
-              latest = candidate;
-              break;
-            }
-            if(!latest) throw new Error('No baseline publication');
-            const {data: runs} = await github.rest.actions.listWorkflowRunsForRepo({...context.repo,head_sha:latest.sha,per_page:100});
-            for(const run of runs.workflow_runs) {
-              const {data} = await github.rest.actions.listWorkflowRunArtifacts({...context.repo,run_id:run.id});
-              if(data.artifacts.some(a => a.name === 'github-pages' && !a.expired)) {
-                core.setOutput('run',String(run.id));
-                core.setOutput('sha',latest.sha);
-                core.info(`Preserving publication ${latest.sha} from run ${run.id}`);
-                return;
-              }
-            }
-            throw new Error('Current publication artifact is unavailable; do not restore an older preview');
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Prepare the short browser check
-        run: |
-          node --check creative-concepts/modular-playground/playground.js
-          node --check creative-concepts/modular-playground/approved-header/header.js
-          npm install --prefix .preview-check --no-package-lock --no-audit --no-fund playwright@1.64.1
-          node .preview-check/node_modules/playwright/cli.js install --with-deps chromium
-      - name: Check the Playground header and themes
-        env:
-          PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
-        run: |
-          python3 -m http.server 4190 --bind 127.0.0.1 >/tmp/concept-server.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill "$SERVER_PID"' EXIT
-          for attempt in $(seq 1 20); do
-            curl --fail --silent http://127.0.0.1:4190/creative-concepts/modular-playground/ >/dev/null && break
-            sleep 1
-          done
-          node scripts/check-playground.cjs
-      - name: Restore the current complete preview
-        uses: actions/download-artifact@v4
-        with:
-          name: github-pages
-          run-id: ${{ steps.baseline.outputs.run }}
-          github-token: ${{ github.token }}
-          repository: irisKaX/axolotl-preview
-          path: previous-preview
-      - name: Replace only Modular Playground
-        env:
-          PREVIEW_SHA: ${{ github.sha }}
-          BASELINE_SHA: ${{ steps.baseline.outputs.sha }}
-        run: |
-          mkdir preview-output
-          tar --no-same-owner -xf previous-preview/artifact.tar -C preview-output
-          python3 - <<'PYCODE'
-          import pathlib,hashlib,json,shutil,os
-          root=pathlib.Path('preview-output')
-          old={str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file() and not str(p.relative_to(root)).startswith('creative-concepts/modular-playground/')}
-          assert 'ds-library-v1-1/index.html' in old
-          assert 'ds-library-v1-1/provenance.json' in old
-          assert 'creative-concepts/immersive-studio/index.html' in old
-          assert 'creative-concepts/spatial-workspace/index.html' in old
-          target=root/'creative-concepts/modular-playground'
-          assert target.is_dir(), 'Existing Playground required'
-          shutil.rmtree(target)
-          shutil.copytree('creative-concepts/modular-playground',target)
-          (target/'provenance.json').write_text(json.dumps({'previewCommit':os.environ['PREVIEW_SHA'],'baselineCommit':os.environ['BASELINE_SHA'],'concept':'modular-playground','evolution':'final-bento','visualRefinementCommit':'2d2dcc9131934ddb6ed6c115a7a95a2787c0ee3c','headerMainCommit':'02a2ff32b8da590d0d7232c063a43d62bc736e7d','previousFilesPreserved':len(old)},indent=2))
-          assert all((root/name).is_file() and hashlib.sha256((root/name).read_bytes()).hexdigest()==digest for name,digest in old.items())
-          current={str(p.relative_to(root)) for p in root.rglob('*') if p.is_file()}
-          assert all(name.startswith('creative-concepts/modular-playground/') for name in current-set(old))
-          print(f'Preserved all {len(old)} existing preview files byte-for-byte.')
-          PYCODE
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: preview-output
-          retention-days: 7
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
-    steps:
-      - name: Recheck publication before replacement
-        uses: actions/github-script@v7
-        env:
-          BASELINE_SHA: ${{ needs.build.outputs.baseline_sha }}
-        with:
-          script: |
-            const {data}=await github.rest.repos.listDeployments({...context.repo,environment:'github-pages',per_page:100});
-            let previous;
-            for(const candidate of data.filter(d=>d.sha!==context.sha)) {
-              const {data:statuses}=await github.rest.repos.listDeploymentStatuses({...context.repo,deployment_id:candidate.id});
-              if(['fdb01603614ccc8b769dbeee958e9ceba0a80406','16a513d4034e9e02332159f5f693058a088bbeaf','1d8663ea85fec2f7b56af864b779c95a24ec0440'].includes(candidate.sha) && ['failure','error'].includes(statuses[0]?.state)) continue;
-              previous=candidate;
-              break;
-            }
-            if(!previous || previous.sha!==process.env.BASELINE_SHA) throw new Error('Newer publication detected; refuse stale replacement');
-      - uses: actions/deploy-pages@v4
-        id: deployment
-        continue-on-error: true
-      - name: Allow a transient Pages server error to settle
-        if: steps.deployment.outcome == 'failure'
-        run: sleep 20
-      - uses: actions/deploy-pages@v4
-        if: steps.deployment.outcome == 'failure'
-        id: deployment_retry
-  verify-public:
-    needs: deploy
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          path: preview
+      - uses: actions/checkout@v4
+        with:
+          repository: irisKaX/axolotl-2
+          ref: design-system/consolidate-v1-1
+          path: source
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm install --prefix .preview-check --no-package-lock --no-audit --no-fund playwright@1.64.1
-      - run: node .preview-check/node_modules/playwright/cli.js install --with-deps chromium
-      - name: Verify the published version
-        env:
-          PREVIEW_SHA: ${{ github.sha }}
-        run: |
-          python3 - <<'PYCODE'
-          import urllib.request,json,time,os
-          url='https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/provenance.json'
-          for attempt in range(12):
-              try:
-                  data=json.load(urllib.request.urlopen(url,timeout=30))
-                  assert data['previewCommit']==os.environ['PREVIEW_SHA']
-                  break
-              except Exception:
-                  if attempt==11: raise
-                  time.sleep(10)
-          PYCODE
-      - name: Check the updated public Playground
-        run: node scripts/check-playground.cjs
-        env:
-          PLAYWRIGHT_MODULE: ${{ github.workspace }}/.preview-check/node_modules/playwright
-          PLAYGROUND_URL: https://iriskax.github.io/axolotl-preview/creative-concepts/modular-playground/
+      - run: npm ci && node scripts/ds-library/build.mjs
+        working-directory: source
+      - run: node scripts/assemble-library.mjs ../source/dist ../review-output
+        working-directory: preview
+      - uses: actions/upload-artifact@v4
+        with:
+          name: consolidated-library-review
+          path: review-output

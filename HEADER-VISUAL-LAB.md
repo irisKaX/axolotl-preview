@@ -1,3 +1,5 @@
+> Archivní podklad. Aktivní katalog je pouze Design System Library V1.1. Historické preview přesměrovává do Library po schváleném nasazení.
+
 # Header Visual Unification Lab
 
 Visual exploration only. No variant is approved for production.

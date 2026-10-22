@@ -1,3 +1,5 @@
+> Archivní podklad. Aktivní katalog je pouze Design System Library V1.1. Historické preview přesměrovává do Library po schváleném nasazení.
+
 # Header Responsive Lab preview
 
 Experiment only; C2 accordion interaction is approved. No visual variant or production rollout is approved.
