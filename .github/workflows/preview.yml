@@ -9,13 +9,14 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: 63bda318f5556b12b629016e821e08feb7374281
-  # Separate immutable test/reference checkouts; neither is the source build.
-  TEST_COMMIT: b4ceef74af60ac12b6b4420917f1ece9c2658b64
+  SOURCE_COMMIT: b4ce8acab7906d6eac45993e80ee32b22ed6be29
+  # Harness is pinned to canonical source; reference remains a separate immutable commit.
+  TEST_COMMIT: b4ce8acab7906d6eac45993e80ee32b22ed6be29
   BASELINE_COMMIT: a6db36ec75ddd8d57dac4fa8a62f4f16ea339a1c
   BASELINE_SHA256: d0f695525f0c0d2c4df542638bf3c55394b66bda4ba5c809c6b9ce660f9c0d26
 jobs:
   build:
+    if: github.repository == 'irisKaX/axolotl-preview' && github.ref == 'refs/heads/design-system/header-final-polish'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -55,7 +56,7 @@ jobs:
             --mount "type=bind,src=$RUNNER_TEMP,dst=$RUNNER_TEMP" \
             --mount "type=bind,src=$BASELINE_DIR,dst=$BASELINE_DIR,readonly" \
             --workdir "$SOURCE_DIR" \
-            -e SOURCE_DIR -e PREVIEW_DIR -e VISUAL_HARNESS_DIR \
+            -e SOURCE_DIR -e PREVIEW_DIR -e VISUAL_HARNESS_DIR -e SOURCE_COMMIT \
             -e BASELINE_DIR -e BASELINE_SHA256 -e RUNNER_TEMP \
             -e NPM_CONFIG_CACHE="$RUNNER_TEMP/npm-cache" \
             axolotl-milestone-a:test bash "$VISUAL_HARNESS_DIR/ci.sh"
@@ -76,12 +77,14 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" \
             --mount "type=bind,src=$GITHUB_WORKSPACE,dst=$GITHUB_WORKSPACE" \
             --workdir "$GITHUB_WORKSPACE/preview" \
+            -e SOURCE_COMMIT -e BASELINE_SHA256 \
             axolotl-milestone-a:test node scripts/assemble-library.mjs ../source/dist ../preview-output
       - uses: actions/upload-pages-artifact@v3
         with:
           path: preview-output
           retention-days: 7
   deploy:
+    if: github.repository == 'irisKaX/axolotl-preview' && github.ref == 'refs/heads/design-system/header-final-polish'
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -115,7 +118,9 @@ jobs:
                   data=json.load(urllib.request.urlopen(url,timeout=30))
                   assert data['previewCommit']==os.environ['SOURCE_COMMIT']
                   assert data['previewRepositoryCommit']==os.environ['PREVIEW_COMMIT']
-                  assert data['previewPatch']['file']=='patches/header-final-polish.patch'
+                  assert data['sourceCommit']==os.environ['SOURCE_COMMIT']
+                  assert data['sourceClean'] is True
+                  assert 'previewPatch' not in data
                   assert data['architecture']=='react-canonical-v2'
                   assert data['theme']=='tweakcn-v1'
                   assert data['themeRevision']=='contrast-v1'

@@ -1,14 +1,53 @@
-# Axolotl · Design System Library V1.1
+# Axolotl Design System Library V1.1
 
-Jediný cílový katalog: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/#design-system
+Only catalog: https://iriskax.github.io/axolotl-preview/ds-library-v1-1/#design-system
 
-Zdroje katalogu jsou v `irisKaX/axolotl-2`, větev `design-system/consolidate-v1-1`. Header a bento z revize `523c983` jsou převzaté do `src/design-system/dashboard/` (React, bez iframe; sdílený původní AppHeader) a zobrazené přímo v Library. Tento repozitář uchovává přesměrování starých preview a sestavení výstupu pro kontrolu.
+The application repository owns React, theme, Header/logo and extension sources.
+This repository assembles one complete preview site plus the 18 compatibility
+redirects in retired-routes.json. No cross-repository Header patch is applied.
 
-1. V axolotl-2: `npm ci && node scripts/ds-library/build.mjs`.
-2. Zde: `node scripts/assemble-library.mjs ../axolotl-2/dist /tmp/axolotl-consolidated-preview` (nový výstupní adresář).
+Release authority remains `design-system/header-final-polish`, `.github/workflows/preview.yml`.
+The local cleanup branch does not authorize publishing. GitHub Pages environment
+policies have NOT been changed; obsolete branches can still hold remote permission
+until the separately reviewed policy change is applied. Do not disable the workflow
+ID globally: historical branches share its path with the current publisher.
 
-`retired-routes.json` eviduje historické veřejné adresy. Git historie uchovává původní podklady. Zadání V2 povoluje experimentální publikaci. Workflow z konsolidační větve sestaví připnutý zdrojový commit, ověří registr a základní ovládání/přístupnost a publikuje jedinou Library spolu s přesměrováními. Používá stávající prostředí `github-pages` a respektuje jeho ochranu větví. Žádný merge ani produkční deployment není součástí změny. Modular Playground se po ověřené vizuální shodě přesměruje přímo na Dashboard.
+## Reproduce locally
 
-Starý katalog na `axolotl-2/#design-system` je vyřazený jako vizuální autorita. Jeho produkční routa zůstává beze změny. Soukromá Inspiration Library se nezveřejňuje ani nemění.
+Use the locked image from the source `scripts/visual-baseline/Dockerfile` (Node
+24.19.0, Playwright 1.64.1, frozen Chromium and fonts). Check out the workflow's full
+SOURCE_COMMIT in a clean source directory, `npm ci`, then:
 
-Aktuální vizuální základ: přesný TweakCN CSS export uživatelky (`tweakcn-v1`), jednotný pro celou Library v light i dark. Brandové palety a Mascot V3 zůstávají oddělené. Montserrat/Fira Code jsou lokální OFL fonty; Georgia podle rozhodnutí uživatelky systémová. Přesné exportované barevné páry mají zdokumentovaná kontrastní omezení.
+```sh
+node scripts/ds-library/build.mjs
+```
+
+The Library build typechecks, builds React, packages the extension after Vite,
+checks the actual ZIP against source and writes source/file/ZIP provenance.
+For local inspection only, in this preview checkout:
+
+```sh
+node scripts/assemble-library.mjs ../source/dist ../review-output --review
+```
+
+The assembler requires a clean source manifest and unchanged payload. `--review`
+marks the artifact `releaseAuthorized:false`; it never publishes or produces a
+release validation marker. Without it, the assembler requires external source and
+baseline pins and a successful mandatory gate bound to that exact artifact digest.
+
+CI runs unit, legacy/tools, browser behavior and the strict immutable baseline gate.
+Missing/corrupt baseline, changed pixels/computed data, or candidate status FAIL.
+Current reference remains candidate; no screenshot auto-update or tolerance exists.
+Production deployment in axolotl-2 remains independent and unchanged.
+
+## Pending remote approval
+
+Restrict preview environment `github-pages` to `design-system/header-final-polish`;
+remove permissions for main, consolidate-v1-1, dark-veil, header-responsive,
+living-catalog and the `esign-system/header-final-polish` typo. Preserve branches
+and Git history. Applying these permissions and publishing require explicit approval.
+
+Historical patch/runner restoration: commit 44b7bdad76ae6a924c1f254c8b3e3a6575685b6f.
+Restore the whole historical recipe and source, never apply its patch to canonical
+Header source. Original public artifact: source 63bda318f5556b12b629016e821e08feb7374281,
+preview 0c2bfdcd4ed1a206c23d0988f0c0661c58397f3a.

@@ -1,0 +1,23 @@
+{
+  "repository": "irisKaX/axolotl-preview",
+  "deletions": [
+    {
+      "path": "patches/header-final-polish.patch",
+      "restoreCommit": "44b7bdad76ae6a924c1f254c8b3e3a6575685b6f",
+      "reason": "Exact H1\u2013H6 incorporated in canonical source; original and polish assertions combined in source check-header.mjs; CI applies no patch",
+      "evidence": "44/44 original patched payload files identical before style ownership migration; canonical Header browser checks pass"
+    },
+    {
+      "path": "scripts/check-header-polish.mjs",
+      "restoreCommit": "44b7bdad76ae6a924c1f254c8b3e3a6575685b6f",
+      "reason": "Exact H1\u2013H6 incorporated in canonical source; original and polish assertions combined in source check-header.mjs; CI applies no patch",
+      "evidence": "44/44 original patched payload files identical before style ownership migration; canonical Header browser checks pass"
+    },
+    {
+      "path": "scripts/header-polish.mjs",
+      "restoreCommit": "44b7bdad76ae6a924c1f254c8b3e3a6575685b6f",
+      "reason": "Exact H1\u2013H6 incorporated in canonical source; original and polish assertions combined in source check-header.mjs; CI applies no patch",
+      "evidence": "44/44 original patched payload files identical before style ownership migration; canonical Header browser checks pass"
+    }
+  ]
+}
