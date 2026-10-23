@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: false
 env:
   SOURCE_COMMIT: c4b47d40574537b6f516bfdcf385248894f9c7ec
-  # Harness is pinned to canonical source; reference remains a separate immutable commit.
-  TEST_COMMIT: c4b47d40574537b6f516bfdcf385248894f9c7ec
+  # CI-only fix; application source and independent approved reference stay immutable.
+  TEST_COMMIT: 9619655e6e4a318d096f0df07b76de4ace8a7974
   BASELINE_COMMIT: 119fc3995442dff4dffee91372bcef570ac0c3f0
   BASELINE_SHA256: 4f288b9ae75e87ee9960e770f0a385e80bf5bd914b33bb7a7bca5ac3a0ac68d6
 jobs:
