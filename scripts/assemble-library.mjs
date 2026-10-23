@@ -22,7 +22,7 @@ if(!review){
  assert(process.env.SOURCE_COMMIT&&process.env.BASELINE_SHA256,'Release requires external source and baseline pins');
  const gate=JSON.parse(readFileSync(path.join(library,'release-validation.json'),'utf8'));
  assert.equal(gate.approved,true);assert.equal(gate.sourceCommit,provenance.sourceCommit);assert.equal(gate.artifactDigest,provenance.artifactDigest);assert.equal(gate.baselineSha256,process.env.BASELINE_SHA256);
- assert.equal(execFileSync('git',['status','--porcelain','--untracked-files=no'],{encoding:'utf8'}).trim(),'','Publisher must be clean');
+ assert.equal(execFileSync('git',['status','--porcelain','--untracked-files=normal'],{encoding:'utf8'}).trim(),'','Publisher must be clean');
 }
 const routesBytes=readFileSync('retired-routes.json'),routes=JSON.parse(routesBytes);assert.equal(routes.length,18);assert.equal(new Set(routes).size,18);
 for(const route of routes){assert(!route.split('/').includes('..')&&!path.isAbsolute(route));const html=readFileSync(route,'utf8');assert(html.includes('/axolotl-preview/ds-library-v1-1/'),`Noncanonical redirect ${route}`);}
