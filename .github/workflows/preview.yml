@@ -9,9 +9,9 @@ concurrency:
   group: axolotl-preview-pages
   cancel-in-progress: false
 env:
-  SOURCE_COMMIT: 76b7c05802582b076d0f797f94a65e5cfcb1a2ba
+  SOURCE_COMMIT: 76a995c92433fa1e42ab3a37e17b81d4e60f8518
   # Harness is pinned to canonical source; reference remains a separate immutable commit.
-  TEST_COMMIT: 76b7c05802582b076d0f797f94a65e5cfcb1a2ba
+  TEST_COMMIT: 76a995c92433fa1e42ab3a37e17b81d4e60f8518
   BASELINE_COMMIT: a6db36ec75ddd8d57dac4fa8a62f4f16ea339a1c
   BASELINE_SHA256: d0f695525f0c0d2c4df542638bf3c55394b66bda4ba5c809c6b9ce660f9c0d26
 jobs:
