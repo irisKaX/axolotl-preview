@@ -12,8 +12,8 @@ env:
   SOURCE_COMMIT: c4b47d40574537b6f516bfdcf385248894f9c7ec
   # Harness is pinned to canonical source; reference remains a separate immutable commit.
   TEST_COMMIT: c4b47d40574537b6f516bfdcf385248894f9c7ec
-  BASELINE_COMMIT: a6db36ec75ddd8d57dac4fa8a62f4f16ea339a1c
-  BASELINE_SHA256: d0f695525f0c0d2c4df542638bf3c55394b66bda4ba5c809c6b9ce660f9c0d26
+  BASELINE_COMMIT: 119fc3995442dff4dffee91372bcef570ac0c3f0
+  BASELINE_SHA256: 4f288b9ae75e87ee9960e770f0a385e80bf5bd914b33bb7a7bca5ac3a0ac68d6
 jobs:
   build:
     if: github.repository == 'irisKaX/axolotl-preview' && github.ref == 'refs/heads/design-system/header-final-polish'

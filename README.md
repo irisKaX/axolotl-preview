@@ -8,8 +8,10 @@ redirects in retired-routes.json. No cross-repository Header patch is applied.
 
 Release authority remains `design-system/header-final-polish`, `.github/workflows/preview.yml`.
 The local cleanup branch does not authorize publishing. GitHub Pages environment
-policies have NOT been changed; obsolete branches can still hold remote permission
-until the separately reviewed policy change is applied. Do not disable the workflow
+policy restriction was explicitly approved on 2026-10-23, but the first DELETE
+returned GitHub 403 `Resource not accessible by integration`. No policies changed;
+obsolete branches still hold remote permission until an authorized administrator
+applies the six approved removals. Do not disable the workflow
 ID globally: historical branches share its path with the current publisher.
 
 ## Reproduce locally
@@ -37,15 +39,23 @@ baseline pins and a successful mandatory gate bound to that exact artifact diges
 
 CI runs unit, legacy/tools, browser behavior and the strict immutable baseline gate.
 Missing/corrupt baseline, changed pixels/computed data, or candidate status FAIL.
-Current reference remains candidate; no screenshot auto-update or tolerance exists.
+Approved reference commit: `119fc3995442dff4dffee91372bcef570ac0c3f0`.
+Manifest SHA-256: `4f288b9ae75e87ee9960e770f0a385e80bf5bd914b33bb7a7bca5ac3a0ac68d6`.
+Canonical source/harness: `c4b47d40574537b6f516bfdcf385248894f9c7ec`.
+The user approved the exact 96 PNG + 96 computed/geometry JSON set on 2026-10-23;
+all bytes are unchanged from independent candidate `a6db36e`. This does not approve
+every catalog design variant or production adoption. No snapshot auto-update or tolerance exists.
 Production deployment in axolotl-2 remains independent and unchanged.
 
-## Pending remote approval
+## Approved preparation; publication still pending
 
 Restrict preview environment `github-pages` to `design-system/header-final-polish`;
 remove permissions for main, consolidate-v1-1, dark-veil, header-responsive,
 living-catalog and the `esign-system/header-final-polish` typo. Preserve branches
-and Git history. Applying these permissions and publishing require explicit approval.
+and Git history. The six policy removals are authorized by the 2026-10-23 user request; applying them
+is blocked by GitHub integration permissions. Publishing is NOT authorized.
+Authorized review branches are `clean-foundation/milestone-a` in both repositories;
+use GitHub compare links for review without changing main or the release branch.
 
 Historical patch/runner restoration: commit 44b7bdad76ae6a924c1f254c8b3e3a6575685b6f.
 Restore the whole historical recipe and source, never apply its patch to canonical
