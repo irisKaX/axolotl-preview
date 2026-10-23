@@ -61,3 +61,23 @@ Historical patch/runner restoration: commit 44b7bdad76ae6a924c1f254c8b3e3a657568
 Restore the whole historical recipe and source, never apply its patch to canonical
 Header source. Original public artifact: source 63bda318f5556b12b629016e821e08feb7374281,
 preview 0c2bfdcd4ed1a206c23d0988f0c0661c58397f3a.
+
+## Final release preparation verification — 2026-10-23
+
+The approved baseline metadata is published on both review branches. The fresh
+strict local gate compared 96 states: 94 exact PNG matches, 96 computed/geometry
+matches. Light Settings differed by 31 pixels (maximum channel delta 4/255),
+mobile dark Brand by 35 pixels (2/255). A bounded three-capture diagnostic per
+case on both the original and candidate build subsequently matched exactly,
+but does not override the failed full gate. No tolerance, mask, snapshot update,
+or release marker was introduced.
+
+TypeScript, 111 unit, 24 legacy, 335 tools, 20 baseline/bridge contracts, 43 Chromium
+integration tests, 208 contrast checks and 10 negative guards passed. The actual
+ZIP was installed and verified on allowed/denied origins; two clean Library builds
+matched exactly; all 18 redirects passed. The technical payload remains unchanged.
+
+**BLOCKED:** six Pages policy removals require integration permissions (HTTP 403),
+and the strict visual gate must pass without exceptions before release. The local
+artifact is review-only (`releaseAuthorized:false`); public Library and production
+remain unchanged. Review uses GitHub compare links, with no PR merge or deployment.
